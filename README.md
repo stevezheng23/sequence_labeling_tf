@@ -1,1 +1,2 @@
-# sequence_labeling_tf
+# Sequence Labeling
+Sequence Labeling model in Tensorflow
