@@ -582,7 +582,11 @@ def prepare_sequence_data(logger,
                           char_vocab_threshold,
                           char_unk,
                           char_pad,
-                          char_feat_enable):
+                          char_feat_enable,
+                          label_vocab_file,
+                          label_vocab_size,
+                          label_unk,
+                          label_pad):
     """prepare sequence data"""
     logger.log_print("# loading input sequence data from {0}".format(input_sequence_file))
     (input_sequence_data, input_text_data,
@@ -597,12 +601,12 @@ def prepare_sequence_data(logger,
         raise ValueError("text & label input data must have the same size")
     
     (word_embed_data, word_vocab_size, word_vocab_index, word_vocab_inverted_index,
-        char_vocab_size, char_vocab_index, char_vocab_inverted_index) = prepare_data(logger, input_text_data,
+        char_vocab_size, char_vocab_index, char_vocab_inverted_index) = prepare_text_data(logger, input_text_data,
             word_vocab_file, word_vocab_size, word_vocab_threshold, word_embed_dim, word_embed_file,
             full_word_embed_file, word_unk, word_pad, word_feat_enable, pretrain_word_embed,
             char_vocab_file, char_vocab_size, char_vocab_threshold, char_unk, char_pad, char_feat_enable)
     
-    label_vocab_size, label_vocab_index, label_vocab_inverted_index = prepare_data(logger, input_label_data,
+    label_vocab_size, label_vocab_index, label_vocab_inverted_index = prepare_label_data(logger, input_label_data,
         label_vocab_file, label_vocab_size, label_unk, label_pad)
     
     return (input_sequence_data, input_text_data, input_label_data,
