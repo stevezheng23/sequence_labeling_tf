@@ -90,6 +90,8 @@
     "model_sequence_forget_bias": false,
     "model_sequence_residual_connect": false,
     "model_sequence_trainable": true,
+    "model_projection_unit_dim": 8,
+    "model_projection_trainable": true,
     "device_num_gpus": 1,
     "device_default_gpu_id": 0,
     "device_log_device_placement": false,
