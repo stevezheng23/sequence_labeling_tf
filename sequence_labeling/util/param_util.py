@@ -105,6 +105,8 @@ def create_default_hyperparams(config_type):
             model_sequence_forget_bias=False,
             model_sequence_residual_connect=False,
             model_sequence_trainable=True,
+            model_projection_unit_dim=8,
+            model_projection_trainable=True,
             device_num_gpus=1,
             device_default_gpu_id=0,
             device_log_device_placement=False,
