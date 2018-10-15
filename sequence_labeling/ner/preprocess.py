@@ -17,11 +17,12 @@ def preprocess(file_name):
         token_list = []
         label_list = []
         for line in file:
-            items = line.strip().split(' ')
+            items = [item for item in line.strip().split(' ') if item]
             if len(items) == 0:
                 if len(token_list) > 0 and len(label_list) > 0 and len(token_list) == len(label_list):
                     processed_data_list.append({
-                        "text": " ".join(token_list)
+                        "id": str(uuid.uuid4()),
+                        "text": " ".join(token_list),
                         "label": " ".join(label_list)
                     })
                 
