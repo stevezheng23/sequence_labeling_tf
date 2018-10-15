@@ -76,7 +76,7 @@ def create_dynamic_pipeline(input_text_word_dataset,
         input_text_char_mask = None
     
     label_pad_id = tf.cast(label_vocab_index.lookup(tf.constant(label_pad)), dtype=tf.int32)
-    input_label = tf.cast(batch_data[2], dtype=tf.float32)
+    input_label = batch_data[2]
     input_label_mask = tf.cast(tf.greater_equal(batch_data[2], label_pad_id), dtype=tf.float32)
     
     return DataPipeline(initializer=iterator.initializer,
@@ -96,10 +96,11 @@ def create_data_pipeline(input_text_word_dataset,
                          char_feat_enable,
                          label_vocab_index,
                          label_pad,
+                         enable_shuffle,
+                         buffer_size,
                          data_size,
                          batch_size,
-                         random_seed,
-                         enable_shuffle):
+                         random_seed):
     """create data pipeline for sequence labeling model"""
     default_pad_id = tf.constant(0, shape=[], dtype=tf.int32)
     default_dataset_tensor = tf.constant(0, shape=[1,1], dtype=tf.int32)
@@ -119,7 +120,7 @@ def create_data_pipeline(input_text_word_dataset,
     dataset = tf.data.Dataset.zip((input_text_word_dataset, input_text_char_dataset, input_label_dataset))
     
     if enable_shuffle == True:
-        buffer_size = data_size
+        buffer_size = min(buffer_size, data_size)
         dataset = dataset.shuffle(buffer_size, random_seed)
     
     dataset = dataset.batch(batch_size=batch_size)
@@ -142,7 +143,7 @@ def create_data_pipeline(input_text_word_dataset,
         input_text_char_mask = None
     
     label_pad_id = tf.cast(label_vocab_index.lookup(tf.constant(label_pad)), dtype=tf.int32)
-    input_label = tf.cast(batch_data[2], dtype=tf.float32)
+    input_label = batch_data[2]
     input_label_mask = tf.cast(tf.greater_equal(batch_data[2], label_pad_id), dtype=tf.float32)
     
     return DataPipeline(initializer=iterator.initializer,
@@ -319,8 +320,6 @@ def process_vocab_table(vocab,
                         unk,
                         pad):
     """process vocab table"""
-    default_vocab = [unk, pad]
-    
     if unk in vocab:
         del vocab[unk]
     if pad in vocab:
@@ -330,6 +329,7 @@ def process_vocab_table(vocab,
     if vocab_lookup is not None:
         vocab = { k: vocab[k] for k in vocab.keys() if k in vocab_lookup }
     
+    default_vocab = list({unk, pad})
     sorted_vocab = sorted(vocab, key=vocab.get, reverse=True)
     sorted_vocab = default_vocab + sorted_vocab
     

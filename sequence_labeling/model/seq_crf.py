@@ -37,8 +37,8 @@ class SequenceCRF(BaseModel):
             text_word_mask = self.data_pipeline.input_text_word_mask
             text_char = self.data_pipeline.input_text_char
             text_char_mask = self.data_pipeline.input_text_char_mask
-            label = self.data_pipeline.input_label
-            label_mask = self.data_pipeline.input_label_mask
+            label = tf.squeeze(self.data_pipeline.input_label, axis=-1)
+            label_mask = tf.squeeze(self.data_pipeline.input_label_mask, axis=-1)
             sequence_length = tf.reduce_sum(label_mask, axis=-1)
             
             """build graph for sequence crf model"""
@@ -236,7 +236,7 @@ class SequenceCRF(BaseModel):
             text_modeling_matrix = tf.get_variable("transition_matrix", shape=[labeling_unit_dim, labeling_unit_dim],
                 initializer=weight_initializer, regularizer=self.regularizer, trainable=labeling_trainable, dtype=tf.float32)
         
-        return text_modeling, text_modeling_mask, transition_matrix
+        return text_modeling, text_modeling_mask, text_modeling_matrix
      
     def _build_graph(self,
                      text_word,

@@ -152,7 +152,7 @@ class BaseModel(object):
               sess,
               word_embedding):
         """train model"""
-        word_embed_pretrained = self.hyperparams.model_representation_word_embed_pretrained
+        word_embed_pretrained = self.hyperparams.model_word_embed_pretrained
         
         if word_embed_pretrained == True:
             (_, loss, learning_rate, global_step, batch_size, summary) = sess.run([self.update_op,
@@ -169,7 +169,7 @@ class BaseModel(object):
               sess,
               word_embedding):
         """infer model"""
-        word_embed_pretrained = self.hyperparams.model_representation_word_embed_pretrained
+        word_embed_pretrained = self.hyperparams.model_word_embed_pretrained
         
         if word_embed_pretrained == True:
             (infer_predict, batch_size,
