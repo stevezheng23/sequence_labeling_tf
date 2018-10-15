@@ -210,8 +210,8 @@ class SequenceCRF(BaseModel):
         sequence_forget_bias = self.hyperparams.model_sequence_forget_bias
         sequence_residual_connect = self.hyperparams.model_sequence_residual_connect
         sequence_trainable = self.hyperparams.model_sequence_trainable
-        projection_unit_dim = self.hyperparams.model_projection_unit_dim
-        projection_trainable = self.hyperparams.model_projection_trainable
+        labeling_unit_dim = self.hyperparams.model_labeling_unit_dim
+        labeling_trainable = self.hyperparams.model_labeling_trainable
         random_seed = self.hyperparams.train_random_seed
         
         with tf.variable_scope("modeling", reuse=tf.AUTO_REUSE):
@@ -223,16 +223,20 @@ class SequenceCRF(BaseModel):
             (text_sequence_modeling, text_sequence_modeling_mask,
                 _, _) = sequence_modeling_layer(text_feat, text_feat_mask)
             
-            projection_modeling_layer = create_dense_layer("single", 1, projection_unit_dim, 1, "", [0.0], None, False, False, 
-                self.num_gpus, self.default_gpu_id, self.regularizer, random_seed, projection_trainable)
+            labeling_modeling_layer = create_dense_layer("single", 1, labeling_unit_dim, 1, "", [0.0], None, False, False, 
+                self.num_gpus, self.default_gpu_id, self.regularizer, random_seed, labeling_trainable)
             
-            (text_projection_modeling,
-                text_projection_modeling_mask) = projection_modeling_layer(text_sequence_modeling, text_sequence_modeling_mask)
+            (text_labeling_modeling,
+                text_labeling_modeling_mask) = labeling_modeling_layer(text_sequence_modeling, text_sequence_modeling_mask)
             
-            text_modeling = text_projection_modeling
-            text_modeling_mask = text_projection_modeling_mask
+            text_modeling = text_labeling_modeling
+            text_modeling_mask = text_labeling_modeling_mask
+            
+            weight_initializer = create_variable_initializer("glorot_uniform", random_seed)
+            text_modeling_matrix = tf.get_variable("transition_matrix", shape=[labeling_unit_dim, labeling_unit_dim],
+                initializer=weight_initializer, regularizer=self.regularizer, trainable=labeling_trainable, dtype=tf.float32)
         
-        return text_modeling, text_modeling_mask
+        return text_modeling, text_modeling_mask, transition_matrix
      
     def _build_graph(self,
                      text_word,
@@ -246,12 +250,14 @@ class SequenceCRF(BaseModel):
                 text_word_mask, text_char, text_char_mask)
             
             """build understanding layer for sequence crf model"""
-            text_modeling, text_modeling_mask = self._build_modeling_layer(text_feat, text_feat_mask)
+            (text_modeling, text_modeling_mask,
+                text_modeling_matrix) = self._build_modeling_layer(text_feat, text_feat_mask)
             
             predict = text_modeling
             predict_mask = text_modeling_mask
+            transition_matrix = text_modeling_matrix
         
-        return predict, predict_mask
+        return predict, predict_mask, transition_matrix
     
     def _compute_loss(self,
                       label,
