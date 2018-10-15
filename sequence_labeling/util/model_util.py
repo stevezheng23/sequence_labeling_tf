@@ -43,14 +43,14 @@ def create_train_model(logger,
         logger.log_print("# create train label dataset")
         label_dataset = tf.data.Dataset.from_tensor_slices(input_label_data)
         input_label_dataset = create_label_dataset(label_dataset,
-            label_vocab_index, hyperparams.data_label_vocab_size, hyperparams.data_label_pad)
+            label_vocab_index, hyperparams.data_label_size, hyperparams.data_label_pad)
         
         logger.log_print("# create train data pipeline")
         data_pipeline = create_data_pipeline(input_text_word_dataset, input_text_char_dataset,
             input_label_dataset, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
-            char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
-            label_vocab_index, hyperparams.data_label_pad, len(input_data), hyperparams.train_batch_size,
-            hyperparams.train_random_seed, hyperparams.train_enable_shuffle)
+            char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable, label_vocab_index,
+            hyperparams.data_label_pad, hyperparams.train_enable_shuffle, hyperparams.train_shuffle_buffer_size,
+            len(input_data), hyperparams.train_batch_size, hyperparams.train_random_seed)
         
         model_creator = get_model_creator(hyperparams.model_type)
         model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
@@ -86,7 +86,7 @@ def create_infer_model(logger,
         label_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
         label_dataset = tf.data.Dataset.from_tensor_slices(label_placeholder)
         input_label_dataset = create_label_dataset(label_dataset,
-            label_vocab_index, hyperparams.data_label_vocab_size, hyperparams.data_label_pad)
+            label_vocab_index, hyperparams.data_label_size, hyperparams.data_label_pad)
         
         logger.log_print("# create infer data pipeline")
         data_size_placeholder = tf.placeholder(shape=[], dtype=tf.int64)
