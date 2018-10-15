@@ -1,7 +1,7 @@
 {
-    "data_train_sequence_file": "data/ner/train-conll2013/train-conll2013.ner.json",
+    "data_train_sequence_file": "data/ner/train-conll2003/train-conll2003.ner.json",
     "data_train_sequence_file_type": "json",
-    "data_eval_sequence_file": "data/ner/dev-conll2013/dev-conll2013.ner.json",
+    "data_eval_sequence_file": "data/ner/dev-conll2003/dev-conll2003.ner.json",
     "data_eval_sequence_file_type": "json",
     "data_embedding_file": "data/ner/resource/ner.word.embed",
     "data_full_embedding_file": "data/glove/glove.840B.300d.txt",
