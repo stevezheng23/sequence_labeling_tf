@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.contrib.rnn import RNNCell
 
 from util.default_util import *
-from util.contextual_modeling_util import *
+from util.sequence_labeling_util import *
 
 __all__ = ["RNN", "BiRNN"]
 

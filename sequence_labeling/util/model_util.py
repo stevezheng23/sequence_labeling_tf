@@ -3,7 +3,7 @@ import collections
 import numpy as np
 import tensorflow as tf
 
-from model.bilstm_cnn_crf import *
+from model.seq_crf import *
 from util.data_util import *
 
 __all__ = ["TrainModel", "InferModel",
