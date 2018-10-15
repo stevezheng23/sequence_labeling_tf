@@ -4,7 +4,7 @@
     "data_eval_sequence_file": "data/ner/dev-conll2003/dev-conll2003.ner.json",
     "data_eval_sequence_file_type": "json",
     "data_embedding_file": "data/ner/resource/ner.word.embed",
-    "data_full_embedding_file": "data/glove/glove.840B.300d.txt",
+    "data_full_embedding_file": "data/glove/glove.6B.100d.txt",
     "data_text_word_size": 50,
     "data_text_char_size": 16,
     "data_word_vocab_file": "data/ner/resource/ner.word.vocab",

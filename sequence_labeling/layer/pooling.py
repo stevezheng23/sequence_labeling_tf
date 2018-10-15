@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 from util.default_util import *
-from util.contextual_modeling_util import *
+from util.sequence_labeling_util import *
 
 __all__ = ["MaxPooling", "MaxPooling3D", "AveragePooling", "AveragePooling3D"]
 

@@ -548,13 +548,13 @@ def prepare_label_data(logger,
         label_vocab = load_vocab_file(label_vocab_file)
         (label_vocab_table, label_vocab_size, label_vocab_index,
             label_vocab_inverted_index) = process_vocab_table(label_vocab, label_vocab_size,
-            label_vocab_threshold, None, label_unk, label_pad)
+            0, None, label_unk, label_pad)
     elif input_data is not None:
         logger.log_print("# creating label vocab table from input data")
         label_vocab = create_label_vocab(input_data)
         (label_vocab_table, label_vocab_size, label_vocab_index,
             label_vocab_inverted_index) = process_vocab_table(label_vocab, label_vocab_size,
-            label_vocab_threshold, None, label_unk, label_pad)
+            0, None, label_unk, label_pad)
         logger.log_print("# creating label vocab file {0}".format(label_vocab_file))
         create_vocab_file(label_vocab_file, label_vocab_table)
     else:
