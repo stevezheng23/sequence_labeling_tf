@@ -18,13 +18,16 @@ def _recall(pred_data, label_data):
 def _f1_score(pred_data, label_data):
     """F1 score"""
     precision, recall = get_precision_recall(pred_data, label_data)
-    f1_score = 2 * precision * recall / (precision + recall)
+    f1_score = 2.0 * precision * recall / (precision + recall)
     return f1_score
 
 def evaluate_from_data(pred_data, label_data, metric):
     """compute evaluation score based on selected metric"""
     if len(pred_data) == 0 or len(label_data) == 0:
         return 0.0
+    
+    predict_data = [predict.split(' ') for predict in predict_data]
+    label_data = [label.split(' ') for label in label_data]
     
     if metric == "precision":
         eval_score = _precision(pred_data, label_data)
