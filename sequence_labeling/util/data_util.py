@@ -19,7 +19,7 @@ __all__ = ["DataPipeline", "create_dynamic_pipeline", "create_data_pipeline",
 
 class DataPipeline(collections.namedtuple("DataPipeline",
     ("initializer", "input_text_word", "input_text_char", "input_label",
-     "input_text_word_mask", "input_text_char_mask", "input_label_mask",
+     "input_text_word_mask", "input_text_char_mask", "input_label_mask", "label_inverted_index",
      "input_text_placeholder", "input_label_placeholder", "data_size_placeholder", "batch_size_placeholder"))):
     pass
 
@@ -33,6 +33,7 @@ def create_dynamic_pipeline(input_text_word_dataset,
                             char_pad,
                             char_feat_enable,
                             label_vocab_index,
+                            label_inverted_index,
                             label_pad,
                             input_text_placeholder,
                             input_label_placeholder,
@@ -76,12 +77,13 @@ def create_dynamic_pipeline(input_text_word_dataset,
         input_text_char_mask = None
     
     label_pad_id = tf.cast(label_vocab_index.lookup(tf.constant(label_pad)), dtype=tf.int32)
-    input_label = batch_data[2]
-    input_label_mask = tf.cast(tf.greater_equal(batch_data[2], label_pad_id), dtype=tf.float32)
+    input_label = tf.cast(batch_data[2], dtype=tf.float32)
+    input_label_mask = tf.cast(tf.not_equal(batch_data[2], label_pad_id), dtype=tf.float32)
     
     return DataPipeline(initializer=iterator.initializer,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
-        input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask, input_label_mask=input_label_mask,
+        input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
+        input_label_mask=input_label_mask, label_inverted_index=label_inverted_index,
         input_text_placeholder=input_text_placeholder, input_label_placeholder=input_label_placeholder,
         data_size_placeholder=data_size_placeholder, batch_size_placeholder=batch_size_placeholder)
 
@@ -95,6 +97,7 @@ def create_data_pipeline(input_text_word_dataset,
                          char_pad,
                          char_feat_enable,
                          label_vocab_index,
+                         label_inverted_index,
                          label_pad,
                          enable_shuffle,
                          buffer_size,
@@ -143,12 +146,13 @@ def create_data_pipeline(input_text_word_dataset,
         input_text_char_mask = None
     
     label_pad_id = tf.cast(label_vocab_index.lookup(tf.constant(label_pad)), dtype=tf.int32)
-    input_label = batch_data[2]
-    input_label_mask = tf.cast(tf.greater_equal(batch_data[2], label_pad_id), dtype=tf.float32)
+    input_label = tf.cast(batch_data[2], dtype=tf.float32)
+    input_label_mask = tf.cast(tf.not_equal(batch_data[2], label_pad_id), dtype=tf.float32)
     
     return DataPipeline(initializer=iterator.initializer,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
-        input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask, input_label_mask=input_label_mask,
+        input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
+        input_label_mask=input_label_mask, label_inverted_index=label_inverted_index,
         input_text_placeholder=None, input_label_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
     
 def create_text_dataset(input_data_set,
@@ -320,6 +324,9 @@ def process_vocab_table(vocab,
                         unk,
                         pad):
     """process vocab table"""
+    if unk == pad:
+        raise ValueError("unknown vocab {0} can not be the same as padding vocab {1}".format(unk, pad))
+    
     if unk in vocab:
         del vocab[unk]
     if pad in vocab:
@@ -327,13 +334,10 @@ def process_vocab_table(vocab,
     
     vocab = { k: vocab[k] for k in vocab.keys() if vocab[k] >= vocab_threshold }
     if vocab_lookup is not None:
-        vocab = { k: vocab[k] for k in vocab.keys() if k in vocab_lookup }
+        vocab = { k: vocab[k] for k in vocab.keys() if k in vocab_lookup or k.lower() in vocab_lookup }
     
-    default_vocab = list({unk, pad})
     sorted_vocab = sorted(vocab, key=vocab.get, reverse=True)
-    sorted_vocab = default_vocab + sorted_vocab
-    
-    vocab_table = sorted_vocab[:vocab_size]
+    vocab_table = [unk] + sorted_vocab[:vocab_size-2] + [pad]
     vocab_size = len(vocab_table)
     
     vocab_index = tf.contrib.lookup.index_table_from_tensor(
@@ -522,7 +526,14 @@ def prepare_text_data(logger,
         logger.log_print("# char vocab table has {0} chars".format(char_vocab_size))
     
     if word_embed_data is not None and word_vocab_table is not None:
-        word_embed_data = { k: word_embed_data[k] for k in word_vocab_table if k in word_embed_data }
+        word_embed_1 = { k: word_embed_data[k] for k in word_vocab_table if k in word_embed_data }
+        word_embed_2 = { k: word_embed_data[k.lower()] for k in word_vocab_table if k.lower() in word_embed_data }
+        word_embed_data = {}
+        if word_embed_1 != None:
+            word_embed_data.update(word_embed_1)
+        if word_embed_2 != None:
+            word_embed_data.update(word_embed_2)
+        
         logger.log_print("# word embedding table has {0} words after filtering".format(len(word_embed_data)))
         if not tf.gfile.Exists(word_embed_file):
             logger.log_print("# creating word embedding file {0}".format(word_embed_file))

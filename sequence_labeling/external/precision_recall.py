@@ -17,9 +17,9 @@ def get_precision_recall(predict_data,
             continue
         
         sample_items.append(list(zip(predict_items, label_items)))
-    
-    label_lookup = { "O", "UNK", "PAD" }
-    tp, tp_tn, tp_fn = 0
+        
+    label_lookup = { "O", "P" }
+    tp, tp_tn, tp_fn = 0, 0, 0
     for predict_item, label_item in sample_items:
         if predict_item not in label_lookup:
             tp_tn += 1

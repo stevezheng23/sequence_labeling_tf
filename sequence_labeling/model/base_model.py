@@ -161,7 +161,7 @@ class BaseModel(object):
         else:
             _, loss, learning_rate, global_step, batch_size, summary = sess.run([self.update_op,
                 self.train_loss, self.learning_rate, self.global_step, self.batch_size, self.train_summary])
-                
+        
         return TrainResult(loss=loss, learning_rate=learning_rate,
             global_step=global_step, batch_size=batch_size, summary=summary)
     
@@ -172,14 +172,16 @@ class BaseModel(object):
         word_embed_pretrained = self.hyperparams.model_word_embed_pretrained
         
         if word_embed_pretrained == True:
-            (infer_predict, batch_size,
-                summary) = sess.run([self.infer_predict, self.batch_size, self.infer_summary],
+            (infer_predict, infer_sequence_length, batch_size,
+                summary) = sess.run([self.infer_predict, self.infer_sequence_length, self.batch_size, self.infer_summary],
                     feed_dict={self.word_embedding_placeholder: word_embedding})
         else:
-            (infer_predict, batch_size,
-                summary) = sess.run([self.infer_predict, self.batch_size, self.infer_summary])
+            (infer_predict, infer_sequence_length, batch_size,
+                summary) = sess.run([self.infer_predict, self.infer_sequence_length, self.batch_size, self.infer_summary])
         
-        return InferResult(predict=infer_predict, batch_size=batch_size, summary=summary)
+        predict = [list(pred[:seq_len]) for pred, seq_len in zip(infer_predict, infer_sequence_length)]
+        
+        return InferResult(predict=predict, batch_size=batch_size, summary=summary)
         
     def _get_train_summary(self):
         """get train summary"""

@@ -42,17 +42,17 @@ def extrinsic_eval(logger,
             model.data_pipeline.data_size_placeholder: data_size,
             model.data_pipeline.batch_size_placeholder: batch_size})
     
-    sample_predict = []
+    predict_data = []
     while True:
         try:
             infer_result = model.model.infer(sess, word_embedding)
-            sample_predict.extend(infer_result.predict)
+            predict_data.extend(infer_result.predict)
         except  tf.errors.OutOfRangeError:
             break
     
-    sample_list = []
-    predict_list = []
-    label_list = []
+    sample_output = []
+    predict_output = []
+    label_output = []
     for i in range(data_size):
         sample = {
             "id": input_data[i]["id"],
@@ -60,8 +60,8 @@ def extrinsic_eval(logger,
             "label": input_data[i]["label"]
         }
         
-        predict = sample_predict[i]
-        label = input_data[i]["label"]
+        predict = [pred.decode('utf-8') for pred in predict_data[i]]
+        label = input_data[i]["label"].split(' ')
         
         sample_output.append(sample)
         predict_output.append(predict)
@@ -69,7 +69,7 @@ def extrinsic_eval(logger,
     
     eval_result_list = []
     for metric in metric_list:
-        score = evaluate_from_data(predict_list, label_list, metric)
+        score = evaluate_from_data(predict_output, label_output, metric)
         summary_writer.add_value_summary(metric, score, global_step)
         eval_result = ExtrinsicEvalLog(metric=metric,
             score=score, sample_output=None, sample_size=len(sample_output))
@@ -140,22 +140,20 @@ def train(logger,
                     train_model.model.save(train_sess, global_step, "debug")
                 if step_in_epoch % hyperparams.train_step_per_eval == 0 and enable_eval == True:
                     ckpt_file = infer_model.model.get_latest_ckpt("debug")
-                    extrinsic_eval(eval_logger, infer_summary_writer, infer_sess,
-                        infer_model, infer_model.input_data, infer_model.input_context,
-                        infer_model.input_response, infer_model.input_label, infer_model.word_embedding,
-                        hyperparams.train_eval_batch_size, hyperparams.train_eval_metric,
-                        global_step, epoch, ckpt_file, "debug")
+                    extrinsic_eval(eval_logger, infer_summary_writer, infer_sess, infer_model,
+                        infer_model.input_data, infer_model.input_text, infer_model.input_label,
+                        infer_model.word_embedding, hyperparams.train_eval_batch_size,
+                        hyperparams.train_eval_metric, global_step, epoch, ckpt_file, "debug")
             except tf.errors.OutOfRangeError:
                 train_logger.check()
                 train_summary_writer.add_summary(train_result.summary, global_step)
                 train_model.model.save(train_sess, global_step, "epoch")
                 if enable_eval == True:
                     ckpt_file = infer_model.model.get_latest_ckpt("epoch")
-                    extrinsic_eval(eval_logger, infer_summary_writer, infer_sess,
-                        infer_model, infer_model.input_data, infer_model.input_context,
-                        infer_model.input_response, infer_model.input_label, infer_model.word_embedding,
-                        hyperparams.train_eval_batch_size, hyperparams.train_eval_metric,
-                        global_step, epoch, ckpt_file, "epoch")
+                    extrinsic_eval(eval_logger, infer_summary_writer, infer_sess, infer_model,
+                        infer_model.input_data, infer_model.input_text, infer_model.input_label,
+                        infer_model.word_embedding, hyperparams.train_eval_batch_size,
+                        hyperparams.train_eval_metric, global_step, epoch, ckpt_file, "epoch")
                 break
 
     train_summary_writer.close_writer()
@@ -190,11 +188,10 @@ def evaluate(logger,
     eval_mode = "debug" if enable_debug == True else "epoch"
     ckpt_file_list = infer_model.model.get_ckpt_list(eval_mode)
     for i, ckpt_file in enumerate(ckpt_file_list):
-        extrinsic_eval(eval_logger, infer_summary_writer, infer_sess,
-            infer_model, infer_model.input_data, infer_model.input_context,
-            infer_model.input_response, infer_model.input_label, infer_model.word_embedding,
-            hyperparams.train_eval_batch_size, hyperparams.train_eval_metric,
-            global_step, i, ckpt_file, eval_mode)
+        extrinsic_eval(eval_logger, infer_summary_writer, infer_sess, infer_model,
+            infer_model.input_data, infer_model.input_text, infer_model.input_label,
+            infer_model.word_embedding, hyperparams.train_eval_batch_size,
+            hyperparams.train_eval_metric, global_step, i, ckpt_file, eval_mode)
     
     infer_summary_writer.close_writer()
     logger.log_print("##### finish evaluation #####")
