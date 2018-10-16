@@ -49,8 +49,8 @@ def create_train_model(logger,
         data_pipeline = create_data_pipeline(input_text_word_dataset, input_text_char_dataset,
             input_label_dataset, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
             char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable, label_vocab_index,
-            hyperparams.data_label_pad, hyperparams.train_enable_shuffle, hyperparams.train_shuffle_buffer_size,
-            len(input_data), hyperparams.train_batch_size, hyperparams.train_random_seed)
+            label_vocab_inverted_index, hyperparams.data_label_pad, hyperparams.train_enable_shuffle,
+            hyperparams.train_shuffle_buffer_size, len(input_data), hyperparams.train_batch_size, hyperparams.train_random_seed)
         
         model_creator = get_model_creator(hyperparams.model_type)
         model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
@@ -93,8 +93,9 @@ def create_infer_model(logger,
         batch_size_placeholder = tf.placeholder(shape=[], dtype=tf.int64)
         data_pipeline = create_dynamic_pipeline(input_text_word_dataset, input_text_char_dataset,
             input_label_dataset, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
-            char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable, label_vocab_index,
-            hyperparams.data_label_pad, text_placeholder, label_placeholder, data_size_placeholder, batch_size_placeholder)
+            char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
+            label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad,
+            text_placeholder, label_placeholder, data_size_placeholder, batch_size_placeholder)
         
         model_creator = get_model_creator(hyperparams.model_type)
         model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,

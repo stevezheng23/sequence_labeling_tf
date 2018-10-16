@@ -26,9 +26,6 @@ def evaluate_from_data(pred_data, label_data, metric):
     if len(pred_data) == 0 or len(label_data) == 0:
         return 0.0
     
-    predict_data = [predict.split(' ') for predict in predict_data]
-    label_data = [label.split(' ') for label in label_data]
-    
     if metric == "precision":
         eval_score = _precision(pred_data, label_data)
     elif metric == "recall":

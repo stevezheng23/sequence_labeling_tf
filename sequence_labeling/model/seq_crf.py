@@ -39,11 +39,14 @@ class SequenceCRF(BaseModel):
             text_char_mask = self.data_pipeline.input_text_char_mask
             label = tf.squeeze(self.data_pipeline.input_label, axis=-1)
             label_mask = tf.squeeze(self.data_pipeline.input_label_mask, axis=-1)
-            sequence_length = tf.reduce_sum(label_mask, axis=-1)
+            label_inverted_index = self.data_pipeline.label_inverted_index
+            masked_label = tf.cast(label * label_mask, dtype=tf.int32)
+            sequence_length = tf.cast(tf.reduce_sum(label_mask, axis=-1), dtype=tf.int32)
             
             """build graph for sequence crf model"""
             self.logger.log_print("# build graph")
             predict, predict_mask, transition_matrix = self._build_graph(text_word, text_word_mask, text_char, text_char_mask)
+            masked_predict = predict * predict_mask
             
             self.variable_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
             self.variable_lookup = {v.op.name: v for v in self.variable_list}
@@ -54,8 +57,9 @@ class SequenceCRF(BaseModel):
             
             if self.mode == "infer":
                 """get infer answer"""
-                self.infer_predict, _ = tf.contrib.crf.crf_decode(predict, transition_matrix, sequence_length)
-                self.infer_predict_mask = predict_mask
+                infer_predict, _ = tf.contrib.crf.crf_decode(predict, transition_matrix, sequence_length)
+                self.infer_predict = label_inverted_index.lookup(tf.cast(infer_predict, dtype=tf.int64))
+                self.infer_sequence_length = sequence_length
                 
                 """create infer summary"""
                 self.infer_summary = self._get_infer_summary()
@@ -63,7 +67,7 @@ class SequenceCRF(BaseModel):
             if self.mode == "train":
                 """compute optimization loss"""
                 self.logger.log_print("# setup loss computation mechanism")
-                self.train_loss = self._compute_loss(label, predict, sequence_length, transition_matrix)
+                self.train_loss = self._compute_loss(masked_label, masked_predict, sequence_length, transition_matrix)
                 
                 if self.hyperparams.train_regularization_enable == True:
                     regularization_variables = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
@@ -364,7 +368,7 @@ class WordFeat(object):
         """call word-level featurization layer"""
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             input_word_embedding_mask = input_word_mask
-            input_word_embedding = tf.squeeze(self.embedding_layer(input_word), axis=-2) * input_word_embedding_mask
+            input_word_embedding = tf.squeeze(self.embedding_layer(input_word), axis=-2)
             
             (input_word_dropout,
                 input_word_dropout_mask) = self.dropout_layer(input_word_embedding, input_word_embedding_mask)
@@ -425,7 +429,7 @@ class CharFeat(object):
         """call char-level featurization layer"""
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             input_char_embedding_mask = tf.expand_dims(input_char_mask, axis=-1)
-            input_char_embedding = self.embedding_layer(input_char) * input_char_embedding_mask
+            input_char_embedding = self.embedding_layer(input_char)
             
             (input_char_conv,
                 input_char_conv_mask) = self.conv_layer(input_char_embedding, input_char_embedding_mask)
