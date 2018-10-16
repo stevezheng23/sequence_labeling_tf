@@ -54,14 +54,15 @@ def extrinsic_eval(logger,
     predict_output = []
     label_output = []
     for i in range(data_size):
+        predict = [pred.decode('utf-8') for pred in predict_data[i]]
+        label = input_data[i]["label"].split(' ')
+        
         sample = {
             "id": input_data[i]["id"],
             "text": input_data[i]["text"],
-            "label": input_data[i]["label"]
+            "label": input_data[i]["label"],
+            "predict": " ".join(predict)
         }
-        
-        predict = [pred.decode('utf-8') for pred in predict_data[i]]
-        label = input_data[i]["label"].split(' ')
         
         sample_output.append(sample)
         predict_output.append(predict)

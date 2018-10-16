@@ -18,7 +18,7 @@ def _recall(pred_data, label_data):
 def _f1_score(pred_data, label_data):
     """F1 score"""
     precision, recall = get_precision_recall(pred_data, label_data)
-    f1_score = 2.0 * precision * recall / (precision + recall)
+    f1_score = 2.0 * precision * recall / (precision + recall) if precision + recall > 0.0 else 0.0
     return f1_score
 
 def evaluate_from_data(pred_data, label_data, metric):

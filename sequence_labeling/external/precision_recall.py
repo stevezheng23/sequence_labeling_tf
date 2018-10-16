@@ -16,8 +16,8 @@ def get_precision_recall(predict_data,
         if len(predict_items) != len(label_items):
             continue
         
-        sample_items.append(list(zip(predict_items, label_items)))
-        
+        sample_items.extend(list(zip(predict_items, label_items)))
+    
     label_lookup = { "O", "P" }
     tp, tp_tn, tp_fn = 0, 0, 0
     for predict_item, label_item in sample_items:
