@@ -31,7 +31,7 @@ class SequenceCRF(BaseModel):
         with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
             self.global_step = tf.get_variable("global_step", shape=[], dtype=tf.int32,
                 initializer=tf.zeros_initializer, trainable=False)
-                        
+            
             """get batch input from data pipeline"""
             text_word = self.data_pipeline.input_text_word
             text_word_mask = self.data_pipeline.input_text_word_mask
