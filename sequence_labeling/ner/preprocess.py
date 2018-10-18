@@ -52,7 +52,7 @@ def output_to_json(data_list, file_name):
 def output_to_plain(data_list, file_name):
     with open(file_name, "wb") as file:
         for data in data_list:
-            data_plain = "{0}\t{1}\t{2}\r\n".format(data["id"], response["text"], response["label"])
+            data_plain = "{0}\t{1}\t{2}\r\n".format(data["id"], data["text"], data["label"])
             file.write(data_plain.encode("utf-8"))
 
 def main(args):
