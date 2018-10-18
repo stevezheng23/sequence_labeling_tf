@@ -1,5 +1,5 @@
 {
-    "data_train_sequence_file": "data/ner/train-conll2003/train-conll2003.ner.all.json",
+    "data_train_sequence_file": "data/ner/train-conll2003/train-conll2003.ner.json",
     "data_train_sequence_file_type": "json",
     "data_eval_sequence_file": "data/ner/dev-conll2003/dev-conll2003.ner.json",
     "data_eval_sequence_file_type": "json",
