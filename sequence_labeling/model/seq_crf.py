@@ -215,6 +215,7 @@ class SequenceCRF(BaseModel):
         sequence_residual_connect = self.hyperparams.model_sequence_residual_connect
         sequence_trainable = self.hyperparams.model_sequence_trainable
         labeling_unit_dim = self.hyperparams.model_labeling_unit_dim
+        labeling_dropout = self.hyperparams.model_labeling_dropout
         labeling_trainable = self.hyperparams.model_labeling_trainable
         random_seed = self.hyperparams.train_random_seed
         
@@ -227,7 +228,7 @@ class SequenceCRF(BaseModel):
             (text_sequence_modeling, text_sequence_modeling_mask,
                 _, _) = sequence_modeling_layer(text_feat, text_feat_mask)
             
-            labeling_modeling_layer = create_dense_layer("single", 1, labeling_unit_dim, 1, "", [0.0], None, False, False, 
+            labeling_modeling_layer = create_dense_layer("single", 1, labeling_unit_dim, 1, "", [labeling_dropout], None, False, False, 
                 self.num_gpus, self.default_gpu_id, self.regularizer, random_seed, labeling_trainable)
             
             (text_labeling_modeling,
