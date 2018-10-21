@@ -103,7 +103,7 @@ def create_default_hyperparams(config_type):
             model_sequence_cell_type="lstm",
             model_sequence_hidden_activation="tanh",
             model_sequence_dropout=0.0,
-            model_sequence_forget_bias=False,
+            model_sequence_forget_bias=1.0,
             model_sequence_residual_connect=False,
             model_sequence_trainable=True,
             model_labeling_unit_dim=9,
