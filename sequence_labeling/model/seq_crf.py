@@ -361,7 +361,7 @@ class WordFeat(object):
             self.embedding_layer = create_embedding_layer(self.vocab_size,
                 self.embed_dim, self.pretrained, 0, 0, self.random_seed, self.trainable)
             
-            self.dropout_layer = create_dropout_layer(self.dropout, 0, 0)
+            self.dropout_layer = create_dropout_layer(self.dropout, 0, 0, self.random_seed)
     
     def __call__(self,
                  input_word,
