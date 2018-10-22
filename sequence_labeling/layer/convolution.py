@@ -53,7 +53,8 @@ class Conv1D(object):
                 kernel_initializer=weight_initializer, bias_initializer=bias_initializer,
                 kernel_regularizer=self.regularizer, bias_regularizer=self.regularizer, trainable=trainable)
             
-            self.dropout_layer = Dropout(keep_prob=1.0-self.dropout, num_gpus=num_gpus, default_gpu_id=default_gpu_id)
+            self.dropout_layer = Dropout(rate=self.dropout, num_gpus=num_gpus,
+                default_gpu_id=default_gpu_id, random_seed=self.random_seed)
             
             if self.layer_norm == True:
                 self.norm_layer = LayerNorm(layer_dim=self.num_channel, num_gpus=num_gpus,
@@ -144,7 +145,8 @@ class Conv3D(object):
                 kernel_initializer=weight_initializer, bias_initializer=bias_initializer,
                 kernel_regularizer=self.regularizer, bias_regularizer=self.regularizer, trainable=trainable)
             
-            self.dropout_layer = Dropout(keep_prob=1.0-self.dropout, num_gpus=num_gpus, default_gpu_id=default_gpu_id)
+            self.dropout_layer = Dropout(rate=self.dropout, num_gpus=num_gpus,
+                default_gpu_id=default_gpu_id, random_seed=self.random_seed)
             
             if self.layer_norm == True:
                 self.norm_layer = LayerNorm(layer_dim=self.num_channel, num_gpus=num_gpus,
@@ -241,7 +243,8 @@ class SeparableConv1D(object):
             self.strides = [1, 1, self.stride_size, 1]
             self.conv_activation = create_activation_function(self.activation)
             
-            self.dropout_layer = Dropout(keep_prob=1.0-self.dropout, num_gpus=num_gpus, default_gpu_id=default_gpu_id)
+            self.dropout_layer = Dropout(rate=self.dropout, num_gpus=num_gpus,
+                default_gpu_id=default_gpu_id, random_seed=self.random_seed)
             
             if self.layer_norm == True:
                 self.norm_layer = LayerNorm(layer_dim=self.num_channel, num_gpus=num_gpus,

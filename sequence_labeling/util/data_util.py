@@ -334,7 +334,7 @@ def process_vocab_table(vocab,
     
     vocab = { k: vocab[k] for k in vocab.keys() if vocab[k] >= vocab_threshold }
     if vocab_lookup is not None:
-        vocab = { k: vocab[k] for k in vocab.keys() if k in vocab_lookup or k.lower() in vocab_lookup }
+        vocab = { k: vocab[k] for k in vocab.keys() if k in vocab_lookup }
     
     sorted_vocab = sorted(vocab, key=vocab.get, reverse=True)
     vocab_table = [unk] + sorted_vocab[:vocab_size-2] + [pad]
@@ -526,14 +526,7 @@ def prepare_text_data(logger,
         logger.log_print("# char vocab table has {0} chars".format(char_vocab_size))
     
     if word_embed_data is not None and word_vocab_table is not None:
-        word_embed_1 = { k: word_embed_data[k] for k in word_vocab_table if k in word_embed_data }
-        word_embed_2 = { k: word_embed_data[k.lower()] for k in word_vocab_table if k.lower() in word_embed_data }
-        word_embed_data = {}
-        if word_embed_1 != None:
-            word_embed_data.update(word_embed_1)
-        if word_embed_2 != None:
-            word_embed_data.update(word_embed_2)
-        
+        word_embed_data = { k: word_embed_data[k] for k in word_vocab_table if k in word_embed_data }
         logger.log_print("# word embedding table has {0} words after filtering".format(len(word_embed_data)))
         if not tf.gfile.Exists(word_embed_file):
             logger.log_print("# creating word embedding file {0}".format(word_embed_file))
