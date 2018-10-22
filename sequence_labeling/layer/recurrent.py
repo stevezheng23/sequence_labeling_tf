@@ -175,7 +175,7 @@ class BiRNN(object):
                  default_gpu_id=0,
                  random_seed=0,
                  trainable=True,
-                 scope="rnn"):
+                 scope="bi_rnn"):
         """initialize bi-directional recurrent layer"""
         self.num_layer = num_layer
         self.unit_dim = unit_dim
