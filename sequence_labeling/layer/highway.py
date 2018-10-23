@@ -6,7 +6,7 @@ from util.sequence_labeling_util import *
 
 from layer.basic import *
 
-__all__ = ["Highway", "ConvHighway", "StackedHighway", "StackedHighway"]
+__all__ = ["Highway", "ConvHighway", "StackedHighway", "StackedConvHighway"]
 
 class Highway(object):
     """highway layer"""
