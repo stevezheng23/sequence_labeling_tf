@@ -14,7 +14,7 @@ def get_precision_recall(predict_data,
     sample_items = []
     for predict_items, label_items in sample_data:
         if len(predict_items) != len(label_items):
-            continue
+            raise ValueError('predict length must be equal to label length')
         
         sample_items.extend(list(zip(predict_items, label_items)))
     
