@@ -19,8 +19,7 @@ __all__ = ["DataPipeline", "create_online_pipeline", "create_dynamic_pipeline",
 
 class DataPipeline(collections.namedtuple("DataPipeline",
     ("initializer", "input_text_word", "input_text_char", "input_label",
-     "input_text_word_mask", "input_text_char_mask", "input_label_mask",
-     "word_vocab_index", "char_vocab_index", "label_inverted_index",
+     "input_text_word_mask", "input_text_char_mask", "input_label_mask", "label_inverted_index",
      "input_text_placeholder", "input_label_placeholder", "data_size_placeholder", "batch_size_placeholder"))):
     pass
 
@@ -39,7 +38,7 @@ def create_online_pipeline(input_text_placeholder,
     input_text_word_mask = None
     if word_feat_enable == True:
         input_text_word = tf.map_fn(lambda sent: generate_word_feat(sent,
-            word_vocab_index, word_max_size, word_pad), input_text_placeholder)
+            word_vocab_index, word_max_size, word_pad), input_text_placeholder, dtype=tf.int32)
         
         word_pad_id = tf.cast(word_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
         input_text_word_mask = tf.cast(tf.not_equal(input_text_word, word_pad_id), dtype=tf.float32)
@@ -48,7 +47,7 @@ def create_online_pipeline(input_text_placeholder,
     input_text_char_mask = None
     if char_feat_enable == True:
         input_text_char = tf.map_fn(lambda sent: generate_char_feat(sent,
-            word_max_size, char_vocab_index, char_max_size, char_pad), input_text_placeholder)
+            word_max_size, char_vocab_index, char_max_size, char_pad), input_text_placeholder, dtype=tf.int32)
         
         char_pad_id = tf.cast(char_vocab_index.lookup(tf.constant(char_pad)), dtype=tf.int32)
         input_text_char_mask = tf.cast(tf.not_equal(input_text_char, char_pad_id), dtype=tf.float32)
@@ -56,8 +55,7 @@ def create_online_pipeline(input_text_placeholder,
     return DataPipeline(initializer=None,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=None,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
-        input_label_mask=None, word_vocab_index=word_vocab_index, char_vocab_index=char_vocab_index,
-        label_inverted_index=label_inverted_index, input_text_placeholder=input_text_placeholder,
+        input_label_mask=None, label_inverted_index=label_inverted_index, input_text_placeholder=input_text_placeholder,
         input_label_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
 
 def create_dynamic_pipeline(input_text_word_dataset,
@@ -120,7 +118,7 @@ def create_dynamic_pipeline(input_text_word_dataset,
     return DataPipeline(initializer=iterator.initializer,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
-        input_label_mask=input_label_mask, word_vocab_index=None, char_vocab_index=None, label_inverted_index=label_inverted_index,
+        input_label_mask=input_label_mask, label_inverted_index=label_inverted_index,
         input_text_placeholder=input_text_placeholder, input_label_placeholder=input_label_placeholder,
         data_size_placeholder=data_size_placeholder, batch_size_placeholder=batch_size_placeholder)
 
@@ -189,8 +187,8 @@ def create_data_pipeline(input_text_word_dataset,
     return DataPipeline(initializer=iterator.initializer,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
-        input_label_mask=input_label_mask, word_vocab_index=None, char_vocab_index=None, label_inverted_index=label_inverted_index,
-        input_text_placeholder=None, input_label_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
+        input_label_mask=input_label_mask, label_inverted_index=label_inverted_index, input_text_placeholder=None,
+        input_label_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
 
 def create_text_dataset(input_data_set,
                         word_vocab_index,
@@ -632,7 +630,7 @@ def prepare_sequence_data(logger,
     input_sequence_data = None
     input_text_data = None
     input_label_data = None
-    tf.gfile.Exists(input_sequence_file):
+    if input_sequence_file != None and input_file_type != None and tf.gfile.Exists(input_sequence_file):
         logger.log_print("# loading input sequence data from {0}".format(input_sequence_file))
         (input_sequence_data, input_text_data,
             input_label_data) = load_sequence_data(input_sequence_file, input_file_type)

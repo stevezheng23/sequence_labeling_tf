@@ -127,14 +127,14 @@ def create_online_model(logger,
         text_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
         data_pipeline = create_online_pipeline(text_placeholder, word_vocab_index,
             hyperparams.data_text_word_size, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
-            char_vocab_index, hyperparams.data_text_char_size, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
-            label_vocab_inverted_index)
+            char_vocab_index, hyperparams.data_text_char_size, hyperparams.data_char_pad,
+            hyperparams.model_char_feat_enable, label_vocab_inverted_index)
         
         model_creator = get_model_creator(hyperparams.model_type)
         model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
             mode="online", scope=hyperparams.model_scope)
         
-        return EvalModel(graph=graph, model=model, data_pipeline=data_pipeline, word_embedding=word_embed_data)
+        return OnlineModel(graph=graph, model=model, data_pipeline=data_pipeline, word_embedding=word_embed_data)
 
 def get_model_creator(model_type):
     if model_type == "seq_crf":
