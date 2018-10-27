@@ -134,7 +134,7 @@ def create_online_model(logger,
         model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
             mode="online", scope=hyperparams.model_scope)
         
-        return EvalModel(graph=graph, model=model, data_pipeline=data_pipeline, word_embedding=word_embed_data)
+        return OnlineModel(graph=graph, model=model, data_pipeline=data_pipeline, word_embedding=word_embed_data)
 
 def get_model_creator(model_type):
     if model_type == "seq_crf":
