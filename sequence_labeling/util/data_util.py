@@ -627,21 +627,17 @@ def prepare_sequence_data(logger,
                           label_unk,
                           label_pad):
     """prepare sequence data"""
-    input_sequence_data = None
-    input_text_data = None
-    input_label_data = None
-    if input_sequence_file != None and input_file_type != None and tf.gfile.Exists(input_sequence_file):
-        logger.log_print("# loading input sequence data from {0}".format(input_sequence_file))
-        (input_sequence_data, input_text_data,
-            input_label_data) = load_sequence_data(input_sequence_file, input_file_type)
-        
-        input_sequence_size = len(input_sequence_data)
-        input_text_size = len(input_text_data)
-        input_label_size = len(input_label_data)
-        logger.log_print("# input sequence data has {0} lines".format(input_sequence_size))
-        
-        if (input_text_size != input_sequence_size or input_label_size != input_sequence_size):
-            raise ValueError("text & label input data must have the same size")
+    logger.log_print("# loading input sequence data from {0}".format(input_sequence_file))
+    (input_sequence_data, input_text_data,
+        input_label_data) = load_sequence_data(input_sequence_file, input_file_type)
+
+    input_sequence_size = len(input_sequence_data)
+    input_text_size = len(input_text_data)
+    input_label_size = len(input_label_data)
+    logger.log_print("# input sequence data has {0} lines".format(input_sequence_size))
+
+    if (input_text_size != input_sequence_size or input_label_size != input_sequence_size):
+        raise ValueError("text & label input data must have the same size")
     
     (word_embed_data, word_vocab_size, word_vocab_index, word_vocab_inverted_index,
         char_vocab_size, char_vocab_index, char_vocab_inverted_index) = prepare_text_data(logger, input_text_data,

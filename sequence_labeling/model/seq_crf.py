@@ -2,6 +2,7 @@ import collections
 import functools
 import os.path
 import operator
+import time
 
 import numpy as np
 import tensorflow as tf
@@ -29,9 +30,6 @@ class SequenceCRF(BaseModel):
             data_pipeline=data_pipeline, mode=mode, scope=scope)
         
         with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
-            self.global_step = tf.get_variable("global_step", shape=[], dtype=tf.int32,
-                initializer=tf.zeros_initializer, trainable=False)
-            
             """get batch input from data pipeline"""
             text_word = self.data_pipeline.input_text_word
             text_word_mask = self.data_pipeline.input_text_word_mask
@@ -56,6 +54,9 @@ class SequenceCRF(BaseModel):
                 self.variable_lookup = {self.ema.average_name(v): v for v in self.variable_list}
             
             if self.mode == "train":
+                self.global_step = tf.get_variable("global_step", shape=[], dtype=tf.int32,
+                    initializer=tf.zeros_initializer, trainable=False)
+                
                 label = tf.squeeze(self.data_pipeline.input_label, axis=-1)
                 label_mask = tf.squeeze(self.data_pipeline.input_label_mask, axis=-1)
                 masked_label = tf.cast(label * label_mask, dtype=tf.int32)
@@ -109,8 +110,9 @@ class SequenceCRF(BaseModel):
                 """create model builder"""
                 if not tf.gfile.Exists(self.hyperparams.train_model_output_dir):
                     tf.gfile.MakeDirs(self.hyperparams.train_model_output_dir)
-
-                self.model_dir = os.path.join(self.hyperparams.train_model_output_dir, self.hyperparams.train_model_version)
+                
+                model_version = "{0}.{1}".format(self.hyperparams.train_model_version, time.time())
+                self.model_dir = os.path.join(self.hyperparams.train_model_output_dir, model_version)
                 self.model_builder = tf.saved_model.builder.SavedModelBuilder(self.model_dir)
             
             """create checkpoint saver"""
@@ -298,9 +300,7 @@ class SequenceCRF(BaseModel):
             signature_def_map={
                 tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
                 predict_signature
-            },
-            clear_devices=True,
-            strip_default_attrs=True)
+            })
         
         self.model_builder.save()
     
