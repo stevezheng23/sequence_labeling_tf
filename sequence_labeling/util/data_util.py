@@ -9,7 +9,7 @@ import tensorflow as tf
 from util.default_util import *
 
 __all__ = ["DataPipeline", "create_dynamic_pipeline", "create_data_pipeline",
-           "create_text_dataset", "create_label_dataset",
+           "create_text_dataset", "create_label_dataset", "create_text_feat",
            "generate_word_feat", "generate_char_feat", "generate_label_feat",
            "create_embedding_file", "load_embedding_file", "convert_embedding",
            "create_vocab_file", "load_vocab_file", "process_vocab_table",
@@ -186,6 +186,36 @@ def create_label_dataset(input_data_set,
         label_vocab_index, label_max_size, label_pad))
     
     return label_dataset
+
+def create_text_feat(sentences,
+                     word_feat_enable,
+                     word_vocab_index,
+                     word_max_size,
+                     word_pad,
+                     char_feat_enable,
+                     char_vocab_index,
+                     char_max_size,
+                     char_pad):
+    """create word/char-level features from sentence"""
+    text_word = None
+    text_word_mask = None
+    if word_feat_enable == True:
+        text_word = tf.map_fn(lambda sent: generate_word_feat(sent,
+            word_vocab_index, word_max_size, word_pad), sentences)
+        
+        word_pad_id = tf.cast(word_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
+        text_word_mask = tf.cast(tf.not_equal(text_word, word_pad_id), dtype=tf.float32)
+    
+    text_char = None
+    text_char_mask = None
+    if char_feat_enable == True:
+        text_char = tf.map_fn(lambda sent: generate_char_feat(sent,
+            word_max_size, char_vocab_index, char_max_size, char_pad), sentences)
+        
+        char_pad_id = tf.cast(char_vocab_index.lookup(tf.constant(char_pad)), dtype=tf.int32)
+        text_char_mask = tf.cast(tf.not_equal(batch_data[1], char_pad_id), dtype=tf.float32)
+    
+    return text_word, text_char, text_word_mask, text_char_mask
 
 def generate_word_feat(sentence,
                        word_vocab_index,

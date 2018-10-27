@@ -46,6 +46,8 @@ def create_default_hyperparams(config_type):
             train_eval_batch_size=100,
             train_eval_metric=["precision", "recall", "f1"],
             train_num_epoch=3,
+            train_model_version="",
+            train_model_output_dir="",
             train_ckpt_output_dir="",
             train_summary_output_dir="",
             train_step_per_stat=10,
