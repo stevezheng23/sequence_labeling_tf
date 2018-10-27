@@ -19,8 +19,7 @@ __all__ = ["DataPipeline", "create_online_pipeline", "create_dynamic_pipeline",
 
 class DataPipeline(collections.namedtuple("DataPipeline",
     ("initializer", "input_text_word", "input_text_char", "input_label",
-     "input_text_word_mask", "input_text_char_mask", "input_label_mask",
-     "word_vocab_index", "char_vocab_index", "label_inverted_index",
+     "input_text_word_mask", "input_text_char_mask", "input_label_mask", "label_inverted_index",
      "input_text_placeholder", "input_label_placeholder", "data_size_placeholder", "batch_size_placeholder"))):
     pass
 
@@ -56,8 +55,7 @@ def create_online_pipeline(input_text_placeholder,
     return DataPipeline(initializer=None,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=None,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
-        input_label_mask=None, word_vocab_index=word_vocab_index, char_vocab_index=char_vocab_index,
-        label_inverted_index=label_inverted_index, input_text_placeholder=input_text_placeholder,
+        input_label_mask=None, label_inverted_index=label_inverted_index, input_text_placeholder=input_text_placeholder,
         input_label_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
 
 def create_dynamic_pipeline(input_text_word_dataset,
@@ -120,7 +118,7 @@ def create_dynamic_pipeline(input_text_word_dataset,
     return DataPipeline(initializer=iterator.initializer,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
-        input_label_mask=input_label_mask, word_vocab_index=None, char_vocab_index=None, label_inverted_index=label_inverted_index,
+        input_label_mask=input_label_mask, label_inverted_index=label_inverted_index,
         input_text_placeholder=input_text_placeholder, input_label_placeholder=input_label_placeholder,
         data_size_placeholder=data_size_placeholder, batch_size_placeholder=batch_size_placeholder)
 
@@ -189,8 +187,8 @@ def create_data_pipeline(input_text_word_dataset,
     return DataPipeline(initializer=iterator.initializer,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
-        input_label_mask=input_label_mask, word_vocab_index=None, char_vocab_index=None, label_inverted_index=label_inverted_index,
-        input_text_placeholder=None, input_label_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
+        input_label_mask=input_label_mask, label_inverted_index=label_inverted_index, input_text_placeholder=None,
+        input_label_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
 
 def create_text_dataset(input_data_set,
                         word_vocab_index,

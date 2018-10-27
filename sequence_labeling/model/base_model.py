@@ -37,7 +37,6 @@ class BaseModel(object):
         self.learning_rate = None
         self.global_step = None
         self.train_summary = None
-        self.infer_summary = None
         self.word_embedding_placeholder = None
         
         self.batch_size = tf.size(tf.reduce_max(self.data_pipeline.input_label_mask, axis=-2))
@@ -171,25 +170,21 @@ class BaseModel(object):
         word_embed_pretrained = self.hyperparams.model_word_embed_pretrained
         
         if word_embed_pretrained == True:
-            (infer_predict, infer_sequence_length, batch_size,
-                summary) = sess.run([self.infer_predict, self.infer_sequence_length, self.batch_size, self.infer_summary],
+            (infer_predict, infer_sequence_length,
+                batch_size) = sess.run([self.infer_predict, self.infer_sequence_length, self.batch_size],
                     feed_dict={self.word_embedding_placeholder: word_embedding})
         else:
-            (infer_predict, infer_sequence_length, batch_size,
-                summary) = sess.run([self.infer_predict, self.infer_sequence_length, self.batch_size, self.infer_summary])
+            (infer_predict, infer_sequence_length,
+                batch_size) = sess.run([self.infer_predict, self.infer_sequence_length, self.batch_size])
         
         predict = [list(pred[:seq_len]) for pred, seq_len in zip(infer_predict, infer_sequence_length)]
         
-        return InferResult(predict=predict, batch_size=batch_size, summary=summary)
+        return InferResult(predict=predict, batch_size=batch_size)
         
     def _get_train_summary(self):
         """get train summary"""
         return tf.summary.merge([tf.summary.scalar("learning_rate", self.learning_rate),
             tf.summary.scalar("train_loss", self.train_loss), tf.summary.scalar("gradient_norm", self.gradient_norm)])
-    
-    def _get_infer_summary(self):
-        """get infer summary"""
-        return tf.no_op()
 
 class FusionModule(object):
     """fusion-module layer"""
