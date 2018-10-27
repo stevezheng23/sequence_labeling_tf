@@ -14,7 +14,7 @@ class TrainResult(collections.namedtuple("TrainResult",
     ("loss", "learning_rate", "global_step", "batch_size", "summary"))):
     pass
 
-class InferResult(collections.namedtuple("InferResult", ("predict", "batch_size", "summary"))):
+class InferResult(collections.namedtuple("InferResult", ("predict", "batch_size"))):
     pass
 
 class BaseModel(object):
@@ -39,7 +39,7 @@ class BaseModel(object):
         self.train_summary = None
         self.word_embedding_placeholder = None
         
-        self.batch_size = tf.size(tf.reduce_max(self.data_pipeline.input_label_mask, axis=-2))
+        self.batch_size = tf.size(tf.reduce_max(self.data_pipeline.input_text_word_mask, axis=[-1,-2]))
         
         self.num_gpus = self.hyperparams.device_num_gpus
         self.default_gpu_id = self.hyperparams.device_default_gpu_id
@@ -153,7 +153,7 @@ class BaseModel(object):
         word_embed_pretrained = self.hyperparams.model_word_embed_pretrained
         
         if word_embed_pretrained == True:
-            (_, loss, learning_rate, global_step, batch_size, summary) = sess.run([self.update_op,
+            _, loss, learning_rate, global_step, batch_size, summary = sess.run([self.update_op,
                 self.train_loss, self.learning_rate, self.global_step, self.batch_size, self.train_summary],
                 feed_dict={self.word_embedding_placeholder: word_embedding})
         else:

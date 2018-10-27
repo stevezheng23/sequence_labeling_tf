@@ -174,28 +174,52 @@ def evaluate(logger,
     if not tf.gfile.Exists(summary_output_dir):
         tf.gfile.MakeDirs(summary_output_dir)
     
-    logger.log_print("##### create infer model #####")
+    logger.log_print("##### create eval model #####")
     eval_model = create_eval_model(logger, hyperparams)
     eval_sess = tf.Session(config=config_proto, graph=eval_model.graph)
     if enable_debug == True:
         eval_sess = tf_debug.LocalCLIDebugWrapperSession(eval_sess)
     
-    eval_summary_writer = SummaryWriter(eval_model.graph, os.path.join(summary_output_dir, "infer"))
+    eval_summary_writer = SummaryWriter(eval_model.graph, os.path.join(summary_output_dir, "eval"))
     init_model(eval_sess, eval_model)
     eval_logger = EvalLogger(hyperparams.data_log_output_dir)
     
     logger.log_print("##### start evaluation #####")
-    global_step = 0
     eval_mode = "debug" if enable_debug == True else "epoch"
     ckpt_file_list = eval_model.model.get_ckpt_list(eval_mode)
     for i, ckpt_file in enumerate(ckpt_file_list):
         extrinsic_eval(eval_logger, eval_summary_writer, eval_sess, eval_model,
             eval_model.input_data, eval_model.input_text, eval_model.input_label,
             eval_model.word_embedding, hyperparams.train_eval_batch_size,
-            hyperparams.train_eval_metric, global_step, i, ckpt_file, eval_mode)
+            hyperparams.train_eval_metric, i, i, ckpt_file, eval_mode)
     
     eval_summary_writer.close_writer()
     logger.log_print("##### finish evaluation #####")
+
+def export(logger,
+           hyperparams,
+           enable_debug=False):   
+    config_proto = get_config_proto(hyperparams.device_log_device_placement,
+        hyperparams.device_allow_soft_placement, hyperparams.device_allow_growth,
+        hyperparams.device_per_process_gpu_memory_fraction)
+    
+    summary_output_dir = hyperparams.train_summary_output_dir
+    if not tf.gfile.Exists(summary_output_dir):
+        tf.gfile.MakeDirs(summary_output_dir)
+    
+    logger.log_print("##### create online model #####")
+    online_model = create_online_model(logger, hyperparams)
+    online_sess = tf.Session(config=config_proto, graph=online_model.graph)
+    if enable_debug == True:
+        online_sess = tf_debug.LocalCLIDebugWrapperSession(online_sess)
+    
+    logger.log_print("##### start exporting #####")
+    ckpt_type = "epoch"
+    ckpt_file = online_model.model.get_latest_ckpt(ckpt_type)
+    init_model(online_sess, online_model)
+    load_model(online_sess, online_model, ckpt_file, ckpt_type)
+    online_model.model.build(online_sess)
+    logger.log_print("##### finish exporting #####")
 
 def main(args):
     hyperparams = load_hyperparams(args.config)
@@ -204,16 +228,20 @@ def main(args):
     tf_version = check_tensorflow_version()
     logger.log_print("# tensorflow verison is {0}".format(tf_version))
     
-    if (args.mode == 'train'):
-        train(logger, hyperparams, enable_eval=False, enable_debug=False)
-    elif (args.mode == 'train_eval'):
+    if (args.mode == 'train_eval'):
         train(logger, hyperparams, enable_eval=True, enable_debug=False)
+    elif (args.mode == 'train'):
+        train(logger, hyperparams, enable_eval=False, enable_debug=False)
     elif (args.mode == 'train_debug'):
         train(logger, hyperparams, enable_eval=False, enable_debug=True)
     elif (args.mode == 'eval'):
         evaluate(logger, hyperparams, enable_debug=False)
     elif (args.mode == 'eval_debug'):
         evaluate(logger, hyperparams, enable_debug=True)
+    elif (args.mode == 'export'):
+        export(logger, hyperparams, enable_debug=False)
+    elif (args.mode == 'export_debug'):
+        export(logger, hyperparams, enable_debug=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

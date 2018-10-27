@@ -37,16 +37,16 @@ class SequenceCRF(BaseModel):
             text_word_mask = self.data_pipeline.input_text_word_mask
             text_char = self.data_pipeline.input_text_char
             text_char_mask = self.data_pipeline.input_text_char_mask
-            label = tf.squeeze(self.data_pipeline.input_label, axis=-1)
-            label_mask = tf.squeeze(self.data_pipeline.input_label_mask, axis=-1)
             label_inverted_index = self.data_pipeline.label_inverted_index
-            masked_label = tf.cast(label * label_mask, dtype=tf.int32)
-            sequence_length = tf.cast(tf.reduce_sum(label_mask, axis=-1), dtype=tf.int32)
+            sequence_length = tf.cast(tf.reduce_sum(text_word_mask, axis=[-1, -2]), dtype=tf.int32)
             
             """build graph for sequence crf model"""
             self.logger.log_print("# build graph")
             predict, predict_mask, transition_matrix = self._build_graph(text_word, text_word_mask, text_char, text_char_mask)
             masked_predict = predict * predict_mask
+            decoded_predict, _ = tf.contrib.crf.crf_decode(masked_predict, transition_matrix, sequence_length)
+            self.infer_predict = label_inverted_index.lookup(tf.cast(decoded_predict, dtype=tf.int64))
+            self.infer_sequence_length = sequence_length
             
             self.variable_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
             self.variable_lookup = {v.op.name: v for v in self.variable_list}
@@ -55,16 +55,11 @@ class SequenceCRF(BaseModel):
                 self.ema = tf.train.ExponentialMovingAverage(decay=self.hyperparams.train_ema_decay_rate)
                 self.variable_lookup = {self.ema.average_name(v): v for v in self.variable_list}
             
-            if self.mode == "infer":
-                """get infer answer"""
-                infer_predict, _ = tf.contrib.crf.crf_decode(predict, transition_matrix, sequence_length)
-                self.infer_predict = label_inverted_index.lookup(tf.cast(infer_predict, dtype=tf.int64))
-                self.infer_sequence_length = sequence_length
-                
-                """create infer summary"""
-                self.infer_summary = self._get_infer_summary()
-            
             if self.mode == "train":
+                label = tf.squeeze(self.data_pipeline.input_label, axis=-1)
+                label_mask = tf.squeeze(self.data_pipeline.input_label_mask, axis=-1)
+                masked_label = tf.cast(label * label_mask, dtype=tf.int32)
+                
                 """compute optimization loss"""
                 self.logger.log_print("# setup loss computation mechanism")
                 self.train_loss = self._compute_loss(masked_label, masked_predict, sequence_length, transition_matrix)
@@ -109,6 +104,14 @@ class SequenceCRF(BaseModel):
                 
                 """create train summary"""
                 self.train_summary = self._get_train_summary()
+            
+            if self.mode == "online":
+                """create model builder"""
+                if not tf.gfile.Exists(self.hyperparams.train_model_output_dir):
+                    tf.gfile.MakeDirs(self.hyperparams.train_model_output_dir)
+
+                self.model_dir = os.path.join(self.hyperparams.train_model_output_dir, self.hyperparams.train_model_version)
+                self.model_builder = tf.saved_model.builder.SavedModelBuilder(self.model_dir)
             
             """create checkpoint saver"""
             if not tf.gfile.Exists(self.hyperparams.train_ckpt_output_dir):
@@ -274,6 +277,32 @@ class SequenceCRF(BaseModel):
         loss = tf.reduce_mean(-1.0 * log_likelihood)
         
         return loss
+    
+    def build(self,
+              sess):
+        """build saved model for sequence crf model"""
+        input_text = tf.saved_model.utils.build_tensor_info(self.data_pipeline.input_text_placeholder)
+        output_predict = tf.saved_model.utils.build_tensor_info(self.infer_predict)
+        output_sequence_length = tf.saved_model.utils.build_tensor_info(self.infer_sequence_length)
+        
+        predict_signature = (tf.saved_model.signature_def_utils.build_signature_def(
+            inputs={ 'text': input_text },
+            outputs={
+                'predict': output_predict,
+                'sequence_length': output_sequence_length
+            },
+            method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME))
+        
+        self.model_builder.add_meta_graph_and_variables(
+            sess, [tf.saved_model.tag_constants.SERVING],
+            signature_def_map={
+                tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
+                predict_signature
+            },
+            clear_devices=True,
+            strip_default_attrs=True)
+        
+        self.model_builder.save()
     
     def save(self,
              sess,
