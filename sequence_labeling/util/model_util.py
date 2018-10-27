@@ -6,15 +6,18 @@ import tensorflow as tf
 from model.seq_crf import *
 from util.data_util import *
 
-__all__ = ["TrainModel", "InferModel",
-           "create_train_model", "create_infer_model",
+__all__ = ["TrainModel", "EvalModel", "OnlineModel",
+           "create_train_model", "create_eval_model", "create_online_model",
            "init_model", "load_model"]
 
 class TrainModel(collections.namedtuple("TrainModel", ("graph", "model", "data_pipeline", "word_embedding"))):
     pass
 
-class InferModel(collections.namedtuple("InferModel",
+class EvalModel(collections.namedtuple("EvalModel",
     ("graph", "model", "data_pipeline", "word_embedding", "input_data", "input_text", "input_label"))):
+    pass
+
+class OnlineModel(collections.namedtuple("OnlineModel", ("graph", "model", "data_pipeline", "word_embedding"))):
     pass
 
 def create_train_model(logger,
@@ -58,11 +61,11 @@ def create_train_model(logger,
         
         return TrainModel(graph=graph, model=model, data_pipeline=data_pipeline, word_embedding=word_embed_data)
 
-def create_infer_model(logger,
-                       hyperparams):
+def create_eval_model(logger,
+                      hyperparams):
     graph = tf.Graph()
     with graph.as_default():
-        logger.log_print("# prepare infer data")
+        logger.log_print("# prepare eval data")
         (input_data, input_text_data, input_label_data,
             word_embed_data, word_vocab_size, word_vocab_index, word_vocab_inverted_index,  
             char_vocab_size, char_vocab_index, char_vocab_inverted_index,
@@ -75,20 +78,20 @@ def create_infer_model(logger,
             hyperparams.model_char_feat_enable, hyperparams.data_label_vocab_file, hyperparams.data_label_vocab_size,
             hyperparams.data_label_unk, hyperparams.data_label_pad)
         
-        logger.log_print("# create infer text dataset")
+        logger.log_print("# create eval text dataset")
         text_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
         text_dataset = tf.data.Dataset.from_tensor_slices(text_placeholder)
         input_text_word_dataset, input_text_char_dataset = create_text_dataset(text_dataset,
             word_vocab_index, hyperparams.data_text_word_size, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
             char_vocab_index, hyperparams.data_text_char_size, hyperparams.data_char_pad, hyperparams.model_char_feat_enable)
         
-        logger.log_print("# create infer label dataset")
+        logger.log_print("# create eval label dataset")
         label_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
         label_dataset = tf.data.Dataset.from_tensor_slices(label_placeholder)
         input_label_dataset = create_label_dataset(label_dataset,
             label_vocab_index, hyperparams.data_label_size, hyperparams.data_label_pad)
         
-        logger.log_print("# create infer data pipeline")
+        logger.log_print("# create eval data pipeline")
         data_size_placeholder = tf.placeholder(shape=[], dtype=tf.int64)
         batch_size_placeholder = tf.placeholder(shape=[], dtype=tf.int64)
         data_pipeline = create_dynamic_pipeline(input_text_word_dataset, input_text_char_dataset,
@@ -99,10 +102,39 @@ def create_infer_model(logger,
         
         model_creator = get_model_creator(hyperparams.model_type)
         model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
-            mode="infer", scope=hyperparams.model_scope)
+            mode="eval", scope=hyperparams.model_scope)
         
-        return InferModel(graph=graph, model=model, data_pipeline=data_pipeline,
+        return EvalModel(graph=graph, model=model, data_pipeline=data_pipeline,
             word_embedding=word_embed_data, input_data=input_data, input_text=input_text_data, input_label=input_label_data)
+
+def create_online_model(logger,
+                        hyperparams):
+    graph = tf.Graph()
+    with graph.as_default():
+        logger.log_print("# prepare online data")
+        (_, _, _, word_embed_data, word_vocab_size, word_vocab_index, word_vocab_inverted_index,
+            char_vocab_size, char_vocab_index, char_vocab_inverted_index, label_vocab_size, label_vocab_index,
+            label_vocab_inverted_index) = prepare_sequence_data(logger, None, None,
+            hyperparams.data_word_vocab_file, hyperparams.data_word_vocab_size, hyperparams.data_word_vocab_threshold,
+            hyperparams.model_word_embed_dim, hyperparams.data_embedding_file, hyperparams.data_full_embedding_file,
+            hyperparams.data_word_unk, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
+            hyperparams.model_word_embed_pretrained, hyperparams.data_char_vocab_file, hyperparams.data_char_vocab_size,
+            hyperparams.data_char_vocab_threshold, hyperparams.data_char_unk, hyperparams.data_char_pad,
+            hyperparams.model_char_feat_enable, hyperparams.data_label_vocab_file, hyperparams.data_label_vocab_size,
+            hyperparams.data_label_unk, hyperparams.data_label_pad)
+        
+        logger.log_print("# create online data pipeline")
+        text_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
+        data_pipeline = create_online_pipeline(text_placeholder, word_vocab_index,
+            hyperparams.data_text_word_size, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
+            char_vocab_index, hyperparams.data_text_char_size, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
+            label_vocab_inverted_index)
+        
+        model_creator = get_model_creator(hyperparams.model_type)
+        model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
+            mode="online", scope=hyperparams.model_scope)
+        
+        return EvalModel(graph=graph, model=model, data_pipeline=data_pipeline, word_embedding=word_embed_data)
 
 def get_model_creator(model_type):
     if model_type == "seq_crf":
