@@ -630,7 +630,7 @@ def prepare_sequence_data(logger,
     input_sequence_data = None
     input_text_data = None
     input_label_data = None
-    tf.gfile.Exists(input_sequence_file):
+    if tf.gfile.Exists(input_sequence_file):
         logger.log_print("# loading input sequence data from {0}".format(input_sequence_file))
         (input_sequence_data, input_text_data,
             input_label_data) = load_sequence_data(input_sequence_file, input_file_type)
