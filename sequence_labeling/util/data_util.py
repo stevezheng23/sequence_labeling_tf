@@ -8,8 +8,8 @@ import tensorflow as tf
 
 from util.default_util import *
 
-__all__ = ["DataPipeline", "create_dynamic_pipeline", "create_data_pipeline",
-           "create_text_dataset", "create_label_dataset", "create_text_feat",
+__all__ = ["DataPipeline", "create_online_pipeline", "create_dynamic_pipeline",
+           "create_data_pipeline", "create_text_dataset", "create_label_dataset",
            "generate_word_feat", "generate_char_feat", "generate_label_feat",
            "create_embedding_file", "load_embedding_file", "convert_embedding",
            "create_vocab_file", "load_vocab_file", "process_vocab_table",
@@ -19,9 +19,46 @@ __all__ = ["DataPipeline", "create_dynamic_pipeline", "create_data_pipeline",
 
 class DataPipeline(collections.namedtuple("DataPipeline",
     ("initializer", "input_text_word", "input_text_char", "input_label",
-     "input_text_word_mask", "input_text_char_mask", "input_label_mask", "label_inverted_index",
+     "input_text_word_mask", "input_text_char_mask", "input_label_mask",
+     "word_vocab_index", "char_vocab_index", "label_inverted_index",
      "input_text_placeholder", "input_label_placeholder", "data_size_placeholder", "batch_size_placeholder"))):
     pass
+
+def create_online_pipeline(input_text_placeholder,
+                           word_vocab_index,
+                           word_max_size,
+                           word_pad,
+                           word_feat_enable,
+                           char_vocab_index,
+                           char_max_size,
+                           char_pad,
+                           char_feat_enable,
+                           label_inverted_index):
+    """create online data pipeline for sequence labeling model"""
+    input_text_word = None
+    input_text_word_mask = None
+    if word_feat_enable == True:
+        input_text_word = tf.map_fn(lambda sent: generate_word_feat(sent,
+            word_vocab_index, word_max_size, word_pad), input_text_placeholder)
+        
+        word_pad_id = tf.cast(word_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
+        input_text_word_mask = tf.cast(tf.not_equal(input_text_word, word_pad_id), dtype=tf.float32)
+    
+    input_text_char = None
+    input_text_char_mask = None
+    if char_feat_enable == True:
+        input_text_char = tf.map_fn(lambda sent: generate_char_feat(sent,
+            word_max_size, char_vocab_index, char_max_size, char_pad), input_text_placeholder)
+        
+        char_pad_id = tf.cast(char_vocab_index.lookup(tf.constant(char_pad)), dtype=tf.int32)
+        input_text_char_mask = tf.cast(tf.not_equal(input_text_char, char_pad_id), dtype=tf.float32)
+    
+    return DataPipeline(initializer=None,
+        input_text_word=input_text_word, input_text_char=input_text_char, input_label=None,
+        input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
+        input_label_mask=None, word_vocab_index=word_vocab_index, char_vocab_index=char_vocab_index,
+        label_inverted_index=label_inverted_index, input_text_placeholder=input_text_placeholder,
+        input_label_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
 
 def create_dynamic_pipeline(input_text_word_dataset,
                             input_text_char_dataset,
@@ -83,7 +120,7 @@ def create_dynamic_pipeline(input_text_word_dataset,
     return DataPipeline(initializer=iterator.initializer,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
-        input_label_mask=input_label_mask, label_inverted_index=label_inverted_index,
+        input_label_mask=input_label_mask, word_vocab_index=None, char_vocab_index=None, label_inverted_index=label_inverted_index,
         input_text_placeholder=input_text_placeholder, input_label_placeholder=input_label_placeholder,
         data_size_placeholder=data_size_placeholder, batch_size_placeholder=batch_size_placeholder)
 
@@ -152,9 +189,9 @@ def create_data_pipeline(input_text_word_dataset,
     return DataPipeline(initializer=iterator.initializer,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
-        input_label_mask=input_label_mask, label_inverted_index=label_inverted_index,
+        input_label_mask=input_label_mask, word_vocab_index=None, char_vocab_index=None, label_inverted_index=label_inverted_index,
         input_text_placeholder=None, input_label_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
-    
+
 def create_text_dataset(input_data_set,
                         word_vocab_index,
                         word_max_size,
@@ -186,36 +223,6 @@ def create_label_dataset(input_data_set,
         label_vocab_index, label_max_size, label_pad))
     
     return label_dataset
-
-def create_text_feat(sentences,
-                     word_feat_enable,
-                     word_vocab_index,
-                     word_max_size,
-                     word_pad,
-                     char_feat_enable,
-                     char_vocab_index,
-                     char_max_size,
-                     char_pad):
-    """create word/char-level features from sentence"""
-    text_word = None
-    text_word_mask = None
-    if word_feat_enable == True:
-        text_word = tf.map_fn(lambda sent: generate_word_feat(sent,
-            word_vocab_index, word_max_size, word_pad), sentences)
-        
-        word_pad_id = tf.cast(word_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
-        text_word_mask = tf.cast(tf.not_equal(text_word, word_pad_id), dtype=tf.float32)
-    
-    text_char = None
-    text_char_mask = None
-    if char_feat_enable == True:
-        text_char = tf.map_fn(lambda sent: generate_char_feat(sent,
-            word_max_size, char_vocab_index, char_max_size, char_pad), sentences)
-        
-        char_pad_id = tf.cast(char_vocab_index.lookup(tf.constant(char_pad)), dtype=tf.int32)
-        text_char_mask = tf.cast(tf.not_equal(batch_data[1], char_pad_id), dtype=tf.float32)
-    
-    return text_word, text_char, text_word_mask, text_char_mask
 
 def generate_word_feat(sentence,
                        word_vocab_index,
@@ -622,17 +629,21 @@ def prepare_sequence_data(logger,
                           label_unk,
                           label_pad):
     """prepare sequence data"""
-    logger.log_print("# loading input sequence data from {0}".format(input_sequence_file))
-    (input_sequence_data, input_text_data,
-        input_label_data) = load_sequence_data(input_sequence_file, input_file_type)
-    
-    input_sequence_size = len(input_sequence_data)
-    input_text_size = len(input_text_data)
-    input_label_size = len(input_label_data)
-    logger.log_print("# input sequence data has {0} lines".format(input_sequence_size))
-    
-    if (input_text_size != input_sequence_size or input_label_size != input_sequence_size):
-        raise ValueError("text & label input data must have the same size")
+    input_sequence_data = None
+    input_text_data = None
+    input_label_data = None
+    tf.gfile.Exists(input_sequence_file):
+        logger.log_print("# loading input sequence data from {0}".format(input_sequence_file))
+        (input_sequence_data, input_text_data,
+            input_label_data) = load_sequence_data(input_sequence_file, input_file_type)
+        
+        input_sequence_size = len(input_sequence_data)
+        input_text_size = len(input_text_data)
+        input_label_size = len(input_label_data)
+        logger.log_print("# input sequence data has {0} lines".format(input_sequence_size))
+        
+        if (input_text_size != input_sequence_size or input_label_size != input_sequence_size):
+            raise ValueError("text & label input data must have the same size")
     
     (word_embed_data, word_vocab_size, word_vocab_index, word_vocab_inverted_index,
         char_vocab_size, char_vocab_index, char_vocab_inverted_index) = prepare_text_data(logger, input_text_data,

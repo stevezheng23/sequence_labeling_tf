@@ -108,14 +108,14 @@ def train(logger,
     train_logger = TrainLogger(hyperparams.data_log_output_dir)
     
     if enable_eval == True:
-        logger.log_print("##### create infer model #####")
-        infer_model = create_infer_model(logger, hyperparams)
-        infer_sess = tf.Session(config=config_proto, graph=infer_model.graph)
+        logger.log_print("##### create eval model #####")
+        eval_model = create_eval_model(logger, hyperparams)
+        eval_sess = tf.Session(config=config_proto, graph=eval_model.graph)
         if enable_debug == True:
-            infer_sess = tf_debug.LocalCLIDebugWrapperSession(infer_sess)
+            eval_sess = tf_debug.LocalCLIDebugWrapperSession(eval_sess)
         
-        infer_summary_writer = SummaryWriter(infer_model.graph, os.path.join(summary_output_dir, "infer"))
-        init_model(infer_sess, infer_model)
+        eval_summary_writer = SummaryWriter(eval_model.graph, os.path.join(summary_output_dir, "eval"))
+        init_model(eval_sess, eval_model)
         eval_logger = EvalLogger(hyperparams.data_log_output_dir)
     
     logger.log_print("##### start training #####")
@@ -140,26 +140,26 @@ def train(logger,
                 if step_in_epoch % hyperparams.train_step_per_ckpt == 0:
                     train_model.model.save(train_sess, global_step, "debug")
                 if step_in_epoch % hyperparams.train_step_per_eval == 0 and enable_eval == True:
-                    ckpt_file = infer_model.model.get_latest_ckpt("debug")
-                    extrinsic_eval(eval_logger, infer_summary_writer, infer_sess, infer_model,
-                        infer_model.input_data, infer_model.input_text, infer_model.input_label,
-                        infer_model.word_embedding, hyperparams.train_eval_batch_size,
+                    ckpt_file = eval_model.model.get_latest_ckpt("debug")
+                    extrinsic_eval(eval_logger, eval_summary_writer, eval_sess, eval_model,
+                        eval_model.input_data, eval_model.input_text, eval_model.input_label,
+                        eval_model.word_embedding, hyperparams.train_eval_batch_size,
                         hyperparams.train_eval_metric, global_step, epoch, ckpt_file, "debug")
             except tf.errors.OutOfRangeError:
                 train_logger.check()
                 train_summary_writer.add_summary(train_result.summary, global_step)
                 train_model.model.save(train_sess, global_step, "epoch")
                 if enable_eval == True:
-                    ckpt_file = infer_model.model.get_latest_ckpt("epoch")
-                    extrinsic_eval(eval_logger, infer_summary_writer, infer_sess, infer_model,
-                        infer_model.input_data, infer_model.input_text, infer_model.input_label,
-                        infer_model.word_embedding, hyperparams.train_eval_batch_size,
+                    ckpt_file = eval_model.model.get_latest_ckpt("epoch")
+                    extrinsic_eval(eval_logger, eval_summary_writer, eval_sess, eval_model,
+                        eval_model.input_data, eval_model.input_text, eval_model.input_label,
+                        eval_model.word_embedding, hyperparams.train_eval_batch_size,
                         hyperparams.train_eval_metric, global_step, epoch, ckpt_file, "epoch")
                 break
 
     train_summary_writer.close_writer()
     if enable_eval == True:
-        infer_summary_writer.close_writer()
+        eval_summary_writer.close_writer()
     
     logger.log_print("##### finish training #####")
 
@@ -175,26 +175,26 @@ def evaluate(logger,
         tf.gfile.MakeDirs(summary_output_dir)
     
     logger.log_print("##### create infer model #####")
-    infer_model = create_infer_model(logger, hyperparams)
-    infer_sess = tf.Session(config=config_proto, graph=infer_model.graph)
+    eval_model = create_eval_model(logger, hyperparams)
+    eval_sess = tf.Session(config=config_proto, graph=eval_model.graph)
     if enable_debug == True:
-        infer_sess = tf_debug.LocalCLIDebugWrapperSession(infer_sess)
+        eval_sess = tf_debug.LocalCLIDebugWrapperSession(eval_sess)
     
-    infer_summary_writer = SummaryWriter(infer_model.graph, os.path.join(summary_output_dir, "infer"))
-    init_model(infer_sess, infer_model)
+    eval_summary_writer = SummaryWriter(eval_model.graph, os.path.join(summary_output_dir, "infer"))
+    init_model(eval_sess, eval_model)
     eval_logger = EvalLogger(hyperparams.data_log_output_dir)
     
     logger.log_print("##### start evaluation #####")
     global_step = 0
     eval_mode = "debug" if enable_debug == True else "epoch"
-    ckpt_file_list = infer_model.model.get_ckpt_list(eval_mode)
+    ckpt_file_list = eval_model.model.get_ckpt_list(eval_mode)
     for i, ckpt_file in enumerate(ckpt_file_list):
-        extrinsic_eval(eval_logger, infer_summary_writer, infer_sess, infer_model,
-            infer_model.input_data, infer_model.input_text, infer_model.input_label,
-            infer_model.word_embedding, hyperparams.train_eval_batch_size,
+        extrinsic_eval(eval_logger, eval_summary_writer, eval_sess, eval_model,
+            eval_model.input_data, eval_model.input_text, eval_model.input_label,
+            eval_model.word_embedding, hyperparams.train_eval_batch_size,
             hyperparams.train_eval_metric, global_step, i, ckpt_file, eval_mode)
     
-    infer_summary_writer.close_writer()
+    eval_summary_writer.close_writer()
     logger.log_print("##### finish evaluation #####")
 
 def main(args):

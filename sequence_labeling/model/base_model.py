@@ -14,8 +14,7 @@ class TrainResult(collections.namedtuple("TrainResult",
     ("loss", "learning_rate", "global_step", "batch_size", "summary"))):
     pass
 
-class InferResult(collections.namedtuple("InferResult",
-    ("predict", "batch_size", "summary"))):
+class InferResult(collections.namedtuple("InferResult", ("predict", "batch_size", "summary"))):
     pass
 
 class BaseModel(object):
