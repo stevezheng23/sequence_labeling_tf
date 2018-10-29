@@ -210,7 +210,7 @@ def export(logger,
     ckpt_file = online_model.model.get_latest_ckpt(ckpt_type)
     word_embedding_placeholder = online_model.model.word_embedding_placeholder
     word_embedding_data = online_model.word_embedding
-    online_sess.run(tf.global_variables_initializer(),
+    online_sess.run([tf.global_variables_initializer(), tf.tables_initializer()],
         feed_dict={word_embedding_placeholder: word_embedding_data})
     online_model.model.restore(online_sess, ckpt_file, ckpt_type)
     online_model.model.build(online_sess)
