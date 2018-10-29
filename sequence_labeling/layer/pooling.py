@@ -41,7 +41,7 @@ class MaxPooling3D(object):
         self.scope = scope
         self.device_spec = get_device_spec(default_gpu_id, num_gpus)
         
-        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device('/CPU:0'):
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
             self.pooling_layer = tf.layers.MaxPooling3D(self.window_size, self.stride_size, "VALID")
     
     def __call__(self,
@@ -108,7 +108,7 @@ class AveragePooling3D(object):
         self.scope = scope
         self.device_spec = get_device_spec(default_gpu_id, num_gpus)
         
-        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device('/CPU:0'):
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
             self.pooling_layer = tf.layers.AveragePooling3D(self.window_size, self.stride_size, "VALID")
     
     def __call__(self,

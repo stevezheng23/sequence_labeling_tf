@@ -44,7 +44,7 @@ class Conv1D(object):
         self.scope=scope
         self.device_spec = get_device_spec(default_gpu_id, num_gpus)
         
-        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device('/CPU:0'):
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
             weight_initializer = create_variable_initializer("glorot_uniform", self.random_seed)
             bias_initializer = create_variable_initializer("zero")
             conv_activation = create_activation_function(self.activation)
@@ -136,7 +136,7 @@ class Conv3D(object):
         self.scope=scope
         self.device_spec = get_device_spec(default_gpu_id, num_gpus)
         
-        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device('/CPU:0'):
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
             weight_initializer = create_variable_initializer("glorot_uniform", self.random_seed)
             bias_initializer = create_variable_initializer("zero")
             conv_activation = create_activation_function(self.activation)
@@ -228,7 +228,7 @@ class SeparableConv1D(object):
         self.scope=scope
         self.device_spec = get_device_spec(default_gpu_id, num_gpus)
         
-        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device('/CPU:0'):
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
             weight_initializer = create_variable_initializer("glorot_uniform", self.random_seed)
             bias_initializer = create_variable_initializer("zero")
             self.depthwise_filter = tf.get_variable("depthwise_filter",
@@ -337,7 +337,7 @@ class MultiConv(object):
         self.scope = scope
         self.device_spec = get_device_spec(default_gpu_id, num_gpus)
         
-        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device('/CPU:0'):
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
             self.conv_layer_list = []
             for i in range(len(self.window_size)):
                 layer_scope = "window_{0}".format(i)
@@ -409,7 +409,7 @@ class StackedConv(object):
         self.scope = scope
         self.device_spec = get_device_spec(default_gpu_id, num_gpus)
         
-        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device('/CPU:0'):
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
             self.conv_layer_list = []
             for i in range(self.num_layer):
                 layer_scope = "layer_{0}".format(i)
@@ -482,7 +482,7 @@ class StackedMultiConv(object):
         self.scope = scope
         self.device_spec = get_device_spec(default_gpu_id, num_gpus)
         
-        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device('/CPU:0'):
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
             self.conv_layer_list = []
             for i in range(self.num_layer):
                 layer_scope = "layer_{0}".format(i)
