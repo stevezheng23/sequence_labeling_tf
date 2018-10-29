@@ -46,7 +46,7 @@ class SequenceCRF(BaseModel):
             self.infer_predict = label_inverted_index.lookup(tf.cast(decoded_predict, dtype=tf.int64))
             self.infer_sequence_length = sequence_length
             
-            self.variable_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+            self.variable_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             self.variable_lookup = {v.op.name: v for v in self.variable_list}
             
             if self.hyperparams.train_ema_enable == True:
@@ -143,6 +143,7 @@ class SequenceCRF(BaseModel):
         word_embed_dim = self.hyperparams.model_word_embed_dim
         word_dropout = self.hyperparams.model_word_dropout if self.mode == "train" else 0.0
         word_embed_pretrained = self.hyperparams.model_word_embed_pretrained
+        word_feat_feedable = False if self.mode == "online" else True
         word_feat_trainable = self.hyperparams.model_word_feat_trainable
         word_feat_enable = self.hyperparams.model_word_feat_enable
         char_vocab_size = self.hyperparams.data_char_vocab_size
@@ -169,7 +170,8 @@ class SequenceCRF(BaseModel):
             if word_feat_enable == True:
                 self.logger.log_print("# build word-level representation layer")
                 word_feat_layer = WordFeat(vocab_size=word_vocab_size, embed_dim=word_embed_dim,
-                    dropout=word_dropout, pretrained=word_embed_pretrained, random_seed=random_seed, trainable=word_feat_trainable)
+                    dropout=word_dropout, pretrained=word_embed_pretrained, random_seed=random_seed,
+                    feedable=word_feat_feedable, trainable=word_feat_trainable)
                 
                 (text_word_feat,
                     text_word_feat_mask) = word_feat_layer(text_word, text_word_mask)
@@ -375,6 +377,7 @@ class WordFeat(object):
                  dropout,
                  pretrained,
                  random_seed=0,
+                 feedable=True,
                  trainable=True,
                  scope="word_feat"):
         """initialize word-level featurization layer"""
@@ -383,12 +386,13 @@ class WordFeat(object):
         self.dropout = dropout
         self.pretrained = pretrained
         self.random_seed = random_seed
+        self.feedable = feedable
         self.trainable = trainable
         self.scope = scope
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             self.embedding_layer = create_embedding_layer(self.vocab_size,
-                self.embed_dim, self.pretrained, 0, 0, self.random_seed, self.trainable)
+                self.embed_dim, self.pretrained, 0, 0, self.random_seed, self.feedable, self.trainable)
             
             self.dropout_layer = create_dropout_layer(self.dropout, 0, 0, self.random_seed)
     
@@ -445,7 +449,7 @@ class CharFeat(object):
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             self.embedding_layer = create_embedding_layer(self.vocab_size,
-                self.embed_dim, False, 0, 0, self.random_seed, self.trainable)
+                self.embed_dim, False, 0, 0, self.random_seed, False, self.trainable)
             
             self.conv_layer = create_convolution_layer("stacked_multi_1d", 1, self.embed_dim,
                 self.unit_dim, self.window_size, 1, "SAME", self.activation, [self.dropout], None,
