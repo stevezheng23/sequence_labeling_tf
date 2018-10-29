@@ -28,11 +28,12 @@ def create_embedding_layer(vocab_size,
                            num_gpus,
                            default_gpu_id,
                            random_seed,
+                           feedable,
                            trainable):
     """create embedding layer"""
     if pretrained == True:
         embed_layer = PretrainedEmbedding(vocab_size=vocab_size, embed_dim=embed_dim,
-            num_gpus=num_gpus, default_gpu_id=default_gpu_id, trainable=trainable)
+            num_gpus=num_gpus, default_gpu_id=default_gpu_id, feedable=feedable, trainable=trainable)
     else:
         embed_layer = Embedding(vocab_size=vocab_size, embed_dim=embed_dim,
             num_gpus=num_gpus, default_gpu_id=default_gpu_id, random_seed=random_seed, trainable=trainable)

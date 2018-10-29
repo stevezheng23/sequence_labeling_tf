@@ -118,7 +118,7 @@ class RNN(object):
         self.trainable = trainable
         self.scope = scope
         
-        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             self.cell = _create_recurrent_cell(self.num_layer, self.unit_dim, self.cell_type,
                 self.activation, self.dropout, self.forget_bias, self.residual_connect,
                 self.attention_mechanism, self.num_gpus, self.default_gpu_id, self.random_seed)
@@ -191,7 +191,7 @@ class BiRNN(object):
         self.trainable = trainable
         self.scope = scope
         
-        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             self.fwd_cell = _create_recurrent_cell(self.num_layer, self.unit_dim, self.cell_type,
                 self.activation, self.dropout, self.forget_bias, self.residual_connect,
                 self.attention_mechanism, self.num_gpus, self.default_gpu_id, self.random_seed)
