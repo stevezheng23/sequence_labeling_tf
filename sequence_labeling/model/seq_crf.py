@@ -302,7 +302,9 @@ class SequenceCRF(BaseModel):
             signature_def_map={
                 tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
                 predict_signature
-            })
+            },
+            clear_devices=True,
+            main_op=tf.tables_initializer())
         
         self.model_builder.save()
     
