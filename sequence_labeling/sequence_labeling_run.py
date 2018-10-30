@@ -198,7 +198,7 @@ def evaluate(logger,
 
 def export(logger,
            hyperparams,
-           enable_debug=False):   
+           enable_debug=False):
     logger.log_print("##### create online model #####")
     online_model = create_online_model(logger, hyperparams)
     online_sess = tf.Session()

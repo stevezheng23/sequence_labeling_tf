@@ -22,6 +22,7 @@
     "data_label_vocab_size": 10,
     "data_label_unk": "O",
     "data_label_pad": "P",
+    "data_external_index_enable": false,
     "data_log_output_dir": "output/seq_crf/log",
     "data_result_output_dir": "output/seq_crf/result",
     "train_random_seed": 100,

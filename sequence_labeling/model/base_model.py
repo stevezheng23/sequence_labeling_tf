@@ -170,14 +170,14 @@ class BaseModel(object):
         word_embed_pretrained = self.hyperparams.model_word_embed_pretrained
         
         if word_embed_pretrained == True:
-            (infer_predict, infer_sequence_length,
-                batch_size) = sess.run([self.infer_predict, self.infer_sequence_length, self.batch_size],
+            (text_predict, sequence_length,
+                batch_size) = sess.run([self.text_predict, self.sequence_length, self.batch_size],
                     feed_dict={self.word_embedding_placeholder: word_embedding})
         else:
-            (infer_predict, infer_sequence_length,
-                batch_size) = sess.run([self.infer_predict, self.infer_sequence_length, self.batch_size])
+            (text_predict, sequence_length,
+                batch_size) = sess.run([self.text_predict, self.sequence_length, self.batch_size])
         
-        predict = [list(pred[:seq_len]) for pred, seq_len in zip(infer_predict, infer_sequence_length)]
+        predict = [list(pred[:seq_len]) for pred, seq_len in zip(text_predict, sequence_length)]
         
         return InferResult(predict=predict, batch_size=batch_size)
         
