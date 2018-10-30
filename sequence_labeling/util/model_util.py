@@ -17,7 +17,7 @@ class EvalModel(collections.namedtuple("EvalModel",
     ("graph", "model", "data_pipeline", "word_embedding", "input_data", "input_text", "input_label"))):
     pass
 
-class OnlineModel(collections.namedtuple("OnlineModel", ("model", "data_pipeline", "word_embedding"))):
+class OnlineModel(collections.namedtuple("OnlineModel", ("model", "data_pipeline"))):
     pass
 
 def create_train_model(logger,
@@ -133,7 +133,7 @@ def create_online_model(logger,
     model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
         mode="online", scope=hyperparams.model_scope)
 
-    return OnlineModel(model=model, data_pipeline=data_pipeline, word_embedding=word_embed_data)
+    return OnlineModel(model=model, data_pipeline=data_pipeline)
 
 def get_model_creator(model_type):
     if model_type == "seq_crf":
