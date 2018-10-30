@@ -123,11 +123,10 @@ def create_online_model(logger,
         hyperparams.data_label_vocab_file, hyperparams.data_label_vocab_size, hyperparams.data_label_unk, hyperparams.data_label_pad)
     
     logger.log_print("# create online data pipeline")
-    text_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
-    data_pipeline = create_online_pipeline(text_placeholder, word_vocab_index,
-        hyperparams.data_text_word_size, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
-        char_vocab_index, hyperparams.data_text_char_size, hyperparams.data_char_pad,
-        hyperparams.model_char_feat_enable, label_vocab_inverted_index)
+    data_pipeline = create_online_pipeline(hyperparams.data_external_index_enable,
+        word_vocab_index, hyperparams.data_text_word_size, hyperparams.data_word_pad,
+        hyperparams.model_word_feat_enable, char_vocab_index, hyperparams.data_text_char_size,
+        hyperparams.data_char_pad, hyperparams.model_char_feat_enable, label_vocab_inverted_index)
 
     model_creator = get_model_creator(hyperparams.model_type)
     model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,

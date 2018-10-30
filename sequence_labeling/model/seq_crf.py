@@ -36,15 +36,14 @@ class SequenceCRF(BaseModel):
             text_char = self.data_pipeline.input_text_char
             text_char_mask = self.data_pipeline.input_text_char_mask
             label_inverted_index = self.data_pipeline.label_inverted_index
-            sequence_length = tf.cast(tf.reduce_sum(text_word_mask, axis=[-1, -2]), dtype=tf.int32)
+            self.sequence_length = tf.cast(tf.reduce_sum(text_word_mask, axis=[-1, -2]), dtype=tf.int32)
             
             """build graph for sequence crf model"""
             self.logger.log_print("# build graph")
             predict, predict_mask, transition_matrix = self._build_graph(text_word, text_word_mask, text_char, text_char_mask)
             masked_predict = predict * predict_mask
-            decoded_predict, _ = tf.contrib.crf.crf_decode(masked_predict, transition_matrix, sequence_length)
-            self.infer_predict = label_inverted_index.lookup(tf.cast(decoded_predict, dtype=tf.int64))
-            self.infer_sequence_length = sequence_length
+            self.index_predict, _ = tf.contrib.crf.crf_decode(masked_predict, transition_matrix, self.sequence_length)
+            self.text_predict = label_inverted_index.lookup(tf.cast(self.index_predict, dtype=tf.int64))
             
             self.variable_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             self.variable_lookup = {v.op.name: v for v in self.variable_list}
@@ -63,7 +62,7 @@ class SequenceCRF(BaseModel):
                 
                 """compute optimization loss"""
                 self.logger.log_print("# setup loss computation mechanism")
-                self.train_loss = self._compute_loss(masked_label, masked_predict, sequence_length, transition_matrix)
+                self.train_loss = self._compute_loss(masked_label, masked_predict, self.sequence_length, transition_matrix)
                 
                 if self.hyperparams.train_regularization_enable == True:
                     regularization_variables = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
@@ -285,17 +284,35 @@ class SequenceCRF(BaseModel):
     def build(self,
               sess):
         """build saved model for sequence crf model"""
-        input_text = tf.saved_model.utils.build_tensor_info(self.data_pipeline.input_text_placeholder)
-        output_predict = tf.saved_model.utils.build_tensor_info(self.infer_predict)
-        output_sequence_length = tf.saved_model.utils.build_tensor_info(self.infer_sequence_length)
-        
-        predict_signature = (tf.saved_model.signature_def_utils.build_signature_def(
-            inputs={ 'text': input_text },
-            outputs={
-                'predict': output_predict,
-                'sequence_length': output_sequence_length
-            },
-            method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME))
+        external_index_enable = self.hyperparams.data_external_index_enable
+        if external_index_enable == True:
+            input_word = tf.saved_model.utils.build_tensor_info(self.data_pipeline.input_word_placeholder)
+            input_char = tf.saved_model.utils.build_tensor_info(self.data_pipeline.input_char_placeholder)
+            output_predict = tf.saved_model.utils.build_tensor_info(self.index_predict)
+            output_sequence_length = tf.saved_model.utils.build_tensor_info(self.sequence_length)
+
+            predict_signature = (tf.saved_model.signature_def_utils.build_signature_def(
+                inputs={
+                    'input_word': input_word,
+                    'input_char': input_char,
+                },
+                outputs={
+                    'output_predict': output_predict,
+                    'output_sequence_length': output_sequence_length
+                },
+                method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME))
+        else:
+            input_text = tf.saved_model.utils.build_tensor_info(self.data_pipeline.input_text_placeholder)
+            output_predict = tf.saved_model.utils.build_tensor_info(self.text_predict)
+            output_sequence_length = tf.saved_model.utils.build_tensor_info(self.sequence_length)
+
+            predict_signature = (tf.saved_model.signature_def_utils.build_signature_def(
+                inputs={ 'input_text': input_text },
+                outputs={
+                    'output_predict': output_predict,
+                    'output_sequence_length': output_sequence_length
+                },
+                method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME))
         
         self.model_builder.add_meta_graph_and_variables(
             sess, [tf.saved_model.tag_constants.SERVING],
@@ -306,7 +323,7 @@ class SequenceCRF(BaseModel):
             clear_devices=True,
             main_op=tf.tables_initializer())
         
-        self.model_builder.save()
+        self.model_builder.save(as_text=False)
     
     def save(self,
              sess,

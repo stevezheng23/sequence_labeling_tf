@@ -37,6 +37,7 @@ def create_default_hyperparams(config_type):
             data_label_vocab_size=10,
             data_label_unk="O",
             data_label_pad="P",
+            data_external_index_enable=False,
             data_log_output_dir="",
             data_result_output_dir="",
             train_random_seed=100,
