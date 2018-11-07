@@ -36,6 +36,8 @@ class SequenceCRF(BaseModel):
             text_char = self.data_pipeline.input_text_char
             text_char_mask = self.data_pipeline.input_text_char_mask
             label_inverted_index = self.data_pipeline.label_inverted_index
+            self.word_vocab_size = self.data_pipeline.word_vocab_size
+            self.char_vocab_size = self.data_pipeline.char_vocab_size
             self.sequence_length = tf.cast(tf.reduce_sum(text_word_mask, axis=[-1, -2]), dtype=tf.int32)
             
             """build graph for sequence crf model"""
@@ -138,14 +140,14 @@ class SequenceCRF(BaseModel):
                                     text_char,
                                     text_char_mask):
         """build representation layer for sequence crf model"""
-        word_vocab_size = self.hyperparams.data_word_vocab_size
+        word_vocab_size = min(self.hyperparams.data_word_vocab_size, self.word_vocab_size)
         word_embed_dim = self.hyperparams.model_word_embed_dim
         word_dropout = self.hyperparams.model_word_dropout if self.mode == "train" else 0.0
         word_embed_pretrained = self.hyperparams.model_word_embed_pretrained
         word_feat_feedable = False if self.mode == "online" else True
         word_feat_trainable = self.hyperparams.model_word_feat_trainable
         word_feat_enable = self.hyperparams.model_word_feat_enable
-        char_vocab_size = self.hyperparams.data_char_vocab_size
+        char_vocab_size = min(self.hyperparams.data_char_vocab_size, self.char_vocab_size)
         char_embed_dim = self.hyperparams.model_char_embed_dim
         char_unit_dim = self.hyperparams.model_char_unit_dim
         char_window_size = self.hyperparams.model_char_window_size
