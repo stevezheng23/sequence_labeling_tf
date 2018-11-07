@@ -18,17 +18,19 @@ __all__ = ["DataPipeline", "create_online_pipeline", "create_dynamic_pipeline",
            "prepare_text_data", "prepare_label_data", "prepare_sequence_data"]
 
 class DataPipeline(collections.namedtuple("DataPipeline",
-    ("initializer", "input_text_word", "input_text_char", "input_label",
-     "input_text_word_mask", "input_text_char_mask", "input_label_mask", "label_inverted_index",
+    ("initializer", "word_vocab_size", "char_vocab_size", "input_text_word", "input_text_char",
+     "input_label", "input_text_word_mask", "input_text_char_mask", "input_label_mask", "label_inverted_index",
      "input_text_placeholder", "input_word_placeholder", "input_char_placeholder",
      "input_label_placeholder", "data_size_placeholder", "batch_size_placeholder"))):
     pass
 
 def create_online_pipeline(external_index_enable,
+                           word_vocab_size,
                            word_vocab_index,
                            word_max_size,
                            word_pad,
                            word_feat_enable,
+                           char_vocab_size,
                            char_vocab_index,
                            char_max_size,
                            char_pad,
@@ -68,7 +70,7 @@ def create_online_pipeline(external_index_enable,
                 word_max_size, char_vocab_index, char_max_size, char_pad), input_text_placeholder, dtype=tf.int32)
             input_text_char_mask = tf.cast(tf.not_equal(input_text_char, char_pad_id), dtype=tf.float32)
     
-    return DataPipeline(initializer=None,
+    return DataPipeline(initializer=None, word_vocab_size=word_vocab_size, char_vocab_size=char_vocab_size,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=None,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask, input_label_mask=None,
         label_inverted_index=label_inverted_index, input_text_placeholder=input_text_placeholder,
@@ -78,9 +80,11 @@ def create_online_pipeline(external_index_enable,
 def create_dynamic_pipeline(input_text_word_dataset,
                             input_text_char_dataset,
                             input_label_dataset,
+                            word_vocab_size,
                             word_vocab_index,
                             word_pad,
                             word_feat_enable,
+                            char_vocab_size,
                             char_vocab_index,
                             char_pad,
                             char_feat_enable,
@@ -132,7 +136,7 @@ def create_dynamic_pipeline(input_text_word_dataset,
     input_label = tf.cast(batch_data[2], dtype=tf.float32)
     input_label_mask = tf.cast(tf.not_equal(batch_data[2], label_pad_id), dtype=tf.float32)
     
-    return DataPipeline(initializer=iterator.initializer,
+    return DataPipeline(initializer=iterator.initializer, word_vocab_size=word_vocab_size, char_vocab_size=char_vocab_size,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
         input_label_mask=input_label_mask, label_inverted_index=label_inverted_index, input_text_placeholder=input_text_placeholder,
@@ -142,9 +146,11 @@ def create_dynamic_pipeline(input_text_word_dataset,
 def create_data_pipeline(input_text_word_dataset,
                          input_text_char_dataset,
                          input_label_dataset,
+                         word_vocab_size,
                          word_vocab_index,
                          word_pad,
                          word_feat_enable,
+                         char_vocab_size,
                          char_vocab_index,
                          char_pad,
                          char_feat_enable,
@@ -201,7 +207,7 @@ def create_data_pipeline(input_text_word_dataset,
     input_label = tf.cast(batch_data[2], dtype=tf.float32)
     input_label_mask = tf.cast(tf.not_equal(batch_data[2], label_pad_id), dtype=tf.float32)
     
-    return DataPipeline(initializer=iterator.initializer,
+    return DataPipeline(initializer=iterator.initializer, word_vocab_size=word_vocab_size, char_vocab_size=char_vocab_size,
         input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
         input_label_mask=input_label_mask, label_inverted_index=label_inverted_index,
