@@ -140,14 +140,12 @@ class SequenceCRF(BaseModel):
                                     text_char,
                                     text_char_mask):
         """build representation layer for sequence crf model"""
-        word_vocab_size = min(self.hyperparams.data_word_vocab_size, self.word_vocab_size)
         word_embed_dim = self.hyperparams.model_word_embed_dim
         word_dropout = self.hyperparams.model_word_dropout if self.mode == "train" else 0.0
         word_embed_pretrained = self.hyperparams.model_word_embed_pretrained
         word_feat_feedable = False if self.mode == "online" else True
         word_feat_trainable = self.hyperparams.model_word_feat_trainable
         word_feat_enable = self.hyperparams.model_word_feat_enable
-        char_vocab_size = min(self.hyperparams.data_char_vocab_size, self.char_vocab_size)
         char_embed_dim = self.hyperparams.model_char_embed_dim
         char_unit_dim = self.hyperparams.model_char_unit_dim
         char_window_size = self.hyperparams.model_char_window_size
@@ -170,7 +168,7 @@ class SequenceCRF(BaseModel):
             
             if word_feat_enable == True:
                 self.logger.log_print("# build word-level representation layer")
-                word_feat_layer = WordFeat(vocab_size=word_vocab_size, embed_dim=word_embed_dim,
+                word_feat_layer = WordFeat(vocab_size=self.word_vocab_size, embed_dim=word_embed_dim,
                     dropout=word_dropout, pretrained=word_embed_pretrained, random_seed=random_seed,
                     feedable=word_feat_feedable, trainable=word_feat_trainable)
                 
@@ -187,7 +185,7 @@ class SequenceCRF(BaseModel):
             
             if char_feat_enable == True:
                 self.logger.log_print("# build char-level representation layer")
-                char_feat_layer = CharFeat(vocab_size=char_vocab_size, embed_dim=char_embed_dim, unit_dim=char_unit_dim,
+                char_feat_layer = CharFeat(vocab_size=self.char_vocab_size, embed_dim=char_embed_dim, unit_dim=char_unit_dim,
                     window_size=char_window_size, activation=char_hidden_activation, pooling_type=char_pooling_type,
                     dropout=char_dropout, num_gpus=self.num_gpus, default_gpu_id=self.default_gpu_id,
                     regularizer=self.regularizer, random_seed=random_seed, trainable=char_feat_trainable)
