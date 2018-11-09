@@ -13,7 +13,7 @@ def preprocess(file_name):
         raise FileNotFoundError("file not found")
     
     processed_data_list = []
-    with open(file_name, "r", encoding="utf8") as file:
+    with open(file_name, "r") as file:
         token_list = []
         label_list = []
         for line in file:
