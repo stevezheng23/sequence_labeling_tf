@@ -66,7 +66,7 @@
     "train_optimizer_adam_beta_2": 0.999,
     "train_optimizer_adam_epsilon": 1e-08,
     "model_type": "seq_crf",
-    "model_scope": "sequence",
+    "model_scope": "sequence_labeling",
     "model_word_embed_dim": 300,
     "model_word_dropout": 0.5,
     "model_word_embed_pretrained": true,
