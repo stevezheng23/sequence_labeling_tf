@@ -260,7 +260,7 @@ class SequenceCRF(BaseModel):
             text_feat, text_feat_mask = self._build_representation_layer(text_word,
                 text_word_mask, text_char, text_char_mask)
             
-            """build understanding layer for sequence crf model"""
+            """build modeling layer for sequence crf model"""
             (text_modeling, text_modeling_mask,
                 text_modeling_matrix) = self._build_modeling_layer(text_feat, text_feat_mask)
             
