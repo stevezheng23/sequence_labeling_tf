@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 
 from model.seq_crf import *
+from model.att_crf import *
 from util.data_util import *
 
 __all__ = ["TrainModel", "EvalModel", "OnlineModel",
@@ -137,6 +138,8 @@ def create_online_model(logger,
 def get_model_creator(model_type):
     if model_type == "seq_crf":
         model_creator = SequenceCRF
+    elif model_type == "att_crf":
+        model_creator = AttentionCRF
     else:
         raise ValueError("can not create model with unsupported model type {0}".format(model_type))
     
