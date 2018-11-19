@@ -236,8 +236,10 @@ class AttentionCRF(BaseModel):
                 layer_dropout=attention_layer_dropout, num_gpus=self.num_gpus, default_gpu_id=self.default_gpu_id,
                 regularizer=self.regularizer, random_seed=random_seed, trainable=attention_trainable)
             
-            (text_attention_modeling,
-                text_attention_modeling_mask) = attention_modeling_layer(text_position_modeling, text_position_modeling_mask)
+            (text_attention_modeling_list,
+                text_attention_modeling_mask_list) = attention_modeling_layer(text_position_modeling, text_position_modeling_mask)
+            text_attention_modeling = text_attention_modeling_list[0]
+            text_attention_modeling_mask = text_attention_modeling_mask_list[0]
             
             labeling_modeling_layer = create_dense_layer("single", 1, labeling_unit_dim, 1, "", [labeling_dropout], None,
                 False, False, True, self.num_gpus, self.default_gpu_id, self.regularizer, random_seed, labeling_trainable)
