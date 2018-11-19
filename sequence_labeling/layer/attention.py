@@ -472,12 +472,10 @@ class Attention(object):
                 output_mask = input_src_mask
             
             if src_shape_size > 3:
-                output_attention_shape = tf.shape(output_attention)
-                output_mask_shape = tf.shape(output_mask)
                 output_attention = tf.reshape(output_attention,
-                    shape=tf.concat([input_src_shape[:-2], output_attention_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_shape[:-2], input_trg_shape[-2:]], axis=0))
                 output_mask = tf.reshape(output_mask,
-                    shape=tf.concat([input_src_mask_shape[:-2], output_mask_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_mask_shape[:-2], input_trg_mask_shape[-2:]], axis=0))
         
         return output_attention, output_mask, output_attention_score, output_score_mask
     
@@ -586,12 +584,10 @@ class MaxAttention(object):
                 output_mask = input_src_mask
             
             if src_shape_size > 3:
-                output_attention_shape = tf.shape(output_attention)
-                output_mask_shape = tf.shape(output_mask)
                 output_attention = tf.reshape(output_attention,
-                    shape=tf.concat([input_src_shape[:-2], output_attention_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_shape[:-2], input_trg_shape[-2:]], axis=0))
                 output_mask = tf.reshape(output_mask,
-                    shape=tf.concat([input_src_mask_shape[:-2], output_mask_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_mask_shape[:-2], input_trg_mask_shape[-2:]], axis=0))
         
         return output_attention, output_mask
     
@@ -699,12 +695,10 @@ class CoAttention(object):
                 output_mask = input_src_mask
             
             if src_shape_size > 3:
-                output_attention_shape = tf.shape(output_attention)
-                output_mask_shape = tf.shape(output_mask)
                 output_attention = tf.reshape(output_attention,
-                    shape=tf.concat([input_src_shape[:-2], output_attention_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_shape[:-2], input_trg_shape[-2:]], axis=0))
                 output_mask = tf.reshape(output_mask,
-                    shape=tf.concat([input_src_mask_shape[:-2], output_mask_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_mask_shape[:-2], input_trg_mask_shape[-2:]], axis=0))
         
         return output_attention, output_mask
     
@@ -820,12 +814,10 @@ class GatedAttention(object):
                 output_mask = input_src_mask
             
             if src_shape_size > 3:
-                output_attention_shape = tf.shape(output_attention)
-                output_mask_shape = tf.shape(output_mask)
                 output_attention = tf.reshape(output_attention,
-                    shape=tf.concat([input_src_shape[:-2], output_attention_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_shape[:-2], input_trg_shape[-2:]], axis=0))
                 output_mask = tf.reshape(output_mask,
-                    shape=tf.concat([input_src_mask_shape[:-2], output_mask_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_mask_shape[:-2], input_trg_mask_shape[-2:]], axis=0))
         
         return output_attention, output_mask
     
@@ -928,12 +920,10 @@ class HeadAttention(object):
             output_mask = input_src_mask
             
             if src_shape_size > 3:
-                output_attention_shape = tf.shape(output_attention)
-                output_mask_shape = tf.shape(output_mask)
                 output_attention = tf.reshape(output_attention,
-                    shape=tf.concat([input_src_shape[:-2], output_attention_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_shape[:-2], input_trg_shape[-2:]], axis=0))
                 output_mask = tf.reshape(output_mask,
-                    shape=tf.concat([input_src_mask_shape[:-2], output_mask_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_mask_shape[:-2], input_trg_mask_shape[-2:]], axis=0))
         
         return output_attention, output_mask
     
@@ -1036,11 +1026,9 @@ class MultiHeadAttention(object):
                 output_mask = input_src_mask
             
             if src_shape_size > 3:
-                output_attention_shape = tf.shape(output_attention)
-                output_mask_shape = tf.shape(output_mask)
                 output_attention = tf.reshape(output_attention,
-                    shape=tf.concat([input_src_shape[:-2], output_attention_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_shape[:-2], input_trg_shape[-2:]], axis=0))
                 output_mask = tf.reshape(output_mask,
-                    shape=tf.concat([input_src_mask_shape[:-2], output_mask_shape[-2:]], axis=0))
+                    shape=tf.concat([input_src_mask_shape[:-2], input_trg_mask_shape[-2:]], axis=0))
         
         return output_attention, output_mask
