@@ -1,1 +1,1 @@
-__all__ = ["base_model", "seq_crf"]
+__all__ = ["base_model", "seq_crf", "att_crf"]

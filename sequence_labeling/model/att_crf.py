@@ -15,18 +15,18 @@ from util.layer_util import *
 
 from model.base_model import *
 
-__all__ = ["SequenceCRF"]
+__all__ = ["AttentionCRF"]
 
-class SequenceCRF(BaseModel):
-    """sequence crf model"""
+class AttentionCRF(BaseModel):
+    """attention crf model"""
     def __init__(self,
                  logger,
                  hyperparams,
                  data_pipeline,
                  mode="train",
-                 scope="seq_crf"):
-        """initialize sequence crf model"""
-        super(SequenceCRF, self).__init__(logger=logger, hyperparams=hyperparams,
+                 scope="att_crf"):
+        """initialize attention crf model"""
+        super(AttentionCRF, self).__init__(logger=logger, hyperparams=hyperparams,
             data_pipeline=data_pipeline, mode=mode, scope=scope)
         
         with tf.variable_scope(scope, reuse=tf.AUTO_REUSE):
@@ -40,7 +40,7 @@ class SequenceCRF(BaseModel):
             self.char_vocab_size = self.data_pipeline.char_vocab_size
             self.sequence_length = tf.cast(tf.reduce_sum(text_word_mask, axis=[-1, -2]), dtype=tf.int32)
             
-            """build graph for sequence crf model"""
+            """build graph for attention crf model"""
             self.logger.log_print("# build graph")
             predict, predict_mask, transition_matrix = self._build_graph(text_word, text_word_mask, text_char, text_char_mask)
             masked_predict = predict * predict_mask
@@ -139,7 +139,7 @@ class SequenceCRF(BaseModel):
                                     text_word_mask,
                                     text_char,
                                     text_char_mask):
-        """build representation layer for sequence crf model"""
+        """build representation layer for attention crf model"""
         word_embed_dim = self.hyperparams.model_word_embed_dim
         word_dropout = self.hyperparams.model_word_dropout if self.mode == "train" else 0.0
         word_embed_pretrained = self.hyperparams.model_word_embed_pretrained
@@ -211,34 +211,41 @@ class SequenceCRF(BaseModel):
     def _build_modeling_layer(self,
                               text_feat,
                               text_feat_mask):
-        """build modeling layer for sequence crf model"""
-        sequence_num_layer = self.hyperparams.model_sequence_num_layer
-        sequence_unit_dim = self.hyperparams.model_sequence_unit_dim
-        sequence_cell_type = self.hyperparams.model_sequence_cell_type
-        sequence_hidden_activation = self.hyperparams.model_sequence_hidden_activation
-        sequence_dropout = self.hyperparams.model_sequence_dropout if self.mode == "train" else 0.0
-        sequence_forget_bias = self.hyperparams.model_sequence_forget_bias
-        sequence_residual_connect = self.hyperparams.model_sequence_residual_connect
-        sequence_trainable = self.hyperparams.model_sequence_trainable
+        """build modeling layer for attention crf model"""
+        attention_num_layer = self.hyperparams.model_attention_num_layer
+        attention_num_head = self.hyperparams.model_attention_num_head
+        attention_unit_dim = self.hyperparams.model_attention_unit_dim
+        attention_hidden_activation = self.hyperparams.model_attention_hidden_activation
+        attention_dropout = self.hyperparams.model_attention_dropout if self.mode == "train" else 0.0
+        attention_layer_dropout = self.hyperparams.model_attention_layer_dropout if self.mode == "train" else 0.0
+        attention_trainable = self.hyperparams.model_attention_trainable
         labeling_unit_dim = self.hyperparams.model_labeling_unit_dim
         labeling_dropout = self.hyperparams.model_labeling_dropout
         labeling_trainable = self.hyperparams.model_labeling_trainable
         random_seed = self.hyperparams.train_random_seed
         
         with tf.variable_scope("modeling", reuse=tf.AUTO_REUSE):
-            self.logger.log_print("# build sequence modeling layer")
-            sequence_modeling_layer = create_recurrent_layer("bi", sequence_num_layer, sequence_unit_dim,
-                sequence_cell_type, sequence_hidden_activation, sequence_dropout, sequence_forget_bias,
-                sequence_residual_connect, None, self.num_gpus, self.default_gpu_id, random_seed, sequence_trainable)
+            self.logger.log_print("# build attention modeling layer")
+            position_modeling_layer = create_position_layer("sin_pos", attention_unit_dim, 0, 10000,
+                self.num_gpus, self.default_gpu_id, random_seed, False)
             
-            (text_sequence_modeling, text_sequence_modeling_mask,
-                _, _) = sequence_modeling_layer(text_feat, text_feat_mask)
+            text_position_modeling, text_position_modeling_mask = position_modeling_layer(text_feat, text_feat_mask)
+            
+            attention_modeling_layer = StackedAttentionBlock(num_layer=attention_num_layer, num_head=attention_num_head,
+                unit_dim=attention_unit_dim, activation=attention_hidden_activation, dropout=attention_dropout,
+                layer_dropout=attention_layer_dropout, num_gpus=self.num_gpus, default_gpu_id=self.default_gpu_id,
+                regularizer=self.regularizer, random_seed=random_seed, trainable=attention_trainable)
+            
+            (text_attention_modeling_list,
+                text_attention_modeling_mask_list) = attention_modeling_layer(text_position_modeling, text_position_modeling_mask)
+            text_attention_modeling = text_attention_modeling_list[0]
+            text_attention_modeling_mask = text_attention_modeling_mask_list[0]
             
             labeling_modeling_layer = create_dense_layer("single", 1, labeling_unit_dim, 1, "", [labeling_dropout], None,
                 False, False, True, self.num_gpus, self.default_gpu_id, self.regularizer, random_seed, labeling_trainable)
             
             (text_labeling_modeling,
-                text_labeling_modeling_mask) = labeling_modeling_layer(text_sequence_modeling, text_sequence_modeling_mask)
+                text_labeling_modeling_mask) = labeling_modeling_layer(text_attention_modeling, text_attention_modeling_mask)
             
             text_modeling = text_labeling_modeling
             text_modeling_mask = text_labeling_modeling_mask
@@ -254,13 +261,13 @@ class SequenceCRF(BaseModel):
                      text_word_mask,
                      text_char,
                      text_char_mask):
-        """build graph for sequence crf model"""
+        """build graph for attention crf model"""
         with tf.variable_scope("graph", reuse=tf.AUTO_REUSE):
-            """build representation layer for sequence crf model"""
+            """build representation layer for attention crf model"""
             text_feat, text_feat_mask = self._build_representation_layer(text_word,
                 text_word_mask, text_char, text_char_mask)
             
-            """build modeling layer for sequence crf model"""
+            """build modeling layer for attention crf model"""
             (text_modeling, text_modeling_mask,
                 text_modeling_matrix) = self._build_modeling_layer(text_feat, text_feat_mask)
             
@@ -283,7 +290,7 @@ class SequenceCRF(BaseModel):
     
     def build(self,
               sess):
-        """build saved model for sequence crf model"""
+        """build saved model for attention crf model"""
         external_index_enable = self.hyperparams.data_external_index_enable
         if external_index_enable == True:
             input_word = tf.saved_model.utils.build_tensor_info(self.data_pipeline.input_word_placeholder)
@@ -329,7 +336,7 @@ class SequenceCRF(BaseModel):
              sess,
              global_step,
              save_mode):
-        """save checkpoint for sequence crf model"""
+        """save checkpoint for attention crf model"""
         if save_mode == "debug":
             self.ckpt_debug_saver.save(sess, self.ckpt_debug_name, global_step=global_step)
         elif save_mode == "epoch":
@@ -341,7 +348,7 @@ class SequenceCRF(BaseModel):
                 sess,
                 ckpt_file,
                 ckpt_type):
-        """restore sequence crf model from checkpoint"""
+        """restore attention crf model from checkpoint"""
         if ckpt_file is None:
             raise FileNotFoundError("checkpoint file doesn't exist")
         
@@ -354,7 +361,7 @@ class SequenceCRF(BaseModel):
     
     def get_latest_ckpt(self,
                         ckpt_type):
-        """get the latest checkpoint for sequence crf model"""
+        """get the latest checkpoint for attention crf model"""
         if ckpt_type == "debug":
             ckpt_file = tf.train.latest_checkpoint(self.ckpt_debug_dir)
             if ckpt_file is None:
@@ -372,7 +379,7 @@ class SequenceCRF(BaseModel):
     
     def get_ckpt_list(self,
                       ckpt_type):
-        """get checkpoint list for sequence crf model"""
+        """get checkpoint list for attention crf model"""
         if ckpt_type == "debug":
             ckpt_state = tf.train.get_checkpoint_state(self.ckpt_debug_dir)
             if ckpt_state is None:
@@ -387,6 +394,132 @@ class SequenceCRF(BaseModel):
             return ckpt_state.all_model_checkpoint_paths
         else:
             raise ValueError("unsupported checkpoint type {0}".format(ckpt_type))
+
+class AttentionBlock(object):
+    """attention-block layer"""
+    def __init__(self,
+                 num_head,
+                 unit_dim,
+                 activation,
+                 dropout,
+                 layer_dropout,
+                 num_gpus=1,
+                 default_gpu_id=0,
+                 regularizer=None,
+                 random_seed=0,
+                 trainable=True,
+                 scope="att_block"):
+        """initialize attention-block layer"""
+        self.num_head = num_head
+        self.unit_dim = unit_dim
+        self.activation = activation
+        self.enable_dropout, self.dropout = dropout
+        self.sublayer_skip, self.num_sublayer, self.layer_dropout = layer_dropout
+        self.num_gpus = num_gpus
+        self.default_gpu_id = default_gpu_id
+        self.regularizer = regularizer
+        self.random_seed = random_seed
+        self.trainable = trainable
+        self.scope = scope
+        
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
+            if self.enable_dropout == True:
+                self.dropout_layer = create_dropout_layer(self.dropout, self.num_gpus, self.default_gpu_id, self.random_seed)
+            
+            if unit_dim % num_head != 0 or unit_dim / num_head == 0:
+                raise ValueError("unit dim {0} and # head {1} mis-match".format(unit_dim, num_head))
+            
+            head_dim = unit_dim / num_head
+            att_dim_list = []
+            for i in range(num_head):
+                att_dim = [head_dim, head_dim, head_dim]
+                att_dim_list.append(att_dim)
+            
+            attention_layer_dropout = self.layer_dropout * float(self.sublayer_skip) / self.num_sublayer
+            self.attention_layer = create_attention_layer("multi_head_att", self.unit_dim,
+                self.unit_dim, att_dim_list, "scaled_dot", attention_layer_dropout, True, True, True,
+                None, self.num_gpus, self.default_gpu_id, self.regularizer, self.random_seed, self.trainable)
+            
+            dense_layer_dropout = [self.layer_dropout * float(self.sublayer_skip + 1) / self.num_sublayer]
+            self.dense_layer = create_dense_layer("double", 1, self.unit_dim, 4, self.activation, [self.dropout],
+                dense_layer_dropout, True, True, True, num_gpus, default_gpu_id, self.regularizer, self.random_seed, self.trainable)
+    
+    def __call__(self,
+                 input_data,
+                 input_mask):
+        """call attention-block layer"""
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
+            if self.enable_dropout == True:
+                input_data, input_mask = self.dropout_layer(input_data, input_mask)
+            
+            input_attention, input_attention_mask = self.attention_layer(input_data, input_data, input_mask, input_mask)
+            input_dense, input_dense_mask = self.dense_layer(input_attention, input_attention_mask)
+            
+            output_block = input_dense
+            output_block_mask = input_dense_mask
+        
+        return output_block, output_block_mask
+
+class StackedAttentionBlock(object):
+    """stacked attention-block layer"""
+    def __init__(self,
+                 num_layer,
+                 num_head,
+                 unit_dim,
+                 activation,
+                 dropout,
+                 layer_dropout,
+                 num_gpus=1,
+                 default_gpu_id=0,
+                 regularizer=None,
+                 random_seed=0,
+                 trainable=True,
+                 scope="stacked_att_block"):
+        """initialize stacked attention-block layer"""
+        self.num_layer = num_layer
+        self.num_head = num_head
+        self.unit_dim = unit_dim
+        self.activation = activation
+        self.dropout = dropout
+        self.layer_dropout = layer_dropout
+        self.num_gpus = num_gpus
+        self.default_gpu_id = default_gpu_id
+        self.regularizer = regularizer
+        self.random_seed = random_seed
+        self.trainable = trainable
+        self.scope = scope
+        
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
+            self.block_layer_list = []
+            num_sublayer = 2 * self.num_layer
+            for i in range(self.num_layer):
+                layer_scope = "layer_{0}".format(i)
+                enable_dropout = True if i % 2 == 0 else False
+                sublayer_skip = 2 * i
+                layer_default_gpu_id = self.default_gpu_id + i
+                block_layer = AttentionBlock(num_head=self.num_head, unit_dim=self.unit_dim, activation=self.activation,
+                    dropout=(enable_dropout, self.dropout), layer_dropout=(sublayer_skip, num_sublayer, self.layer_dropout),
+                    num_gpus=self.num_gpus, default_gpu_id=layer_default_gpu_id, regularizer=self.regularizer,
+                    random_seed=self.random_seed, trainable=self.trainable, scope=layer_scope)
+                self.block_layer_list.append(block_layer)
+    
+    def __call__(self,
+                 input_data,
+                 input_mask):
+        """call stacked attention-block layer"""
+        with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
+            output_block_list = []
+            output_block_mask_list = []
+            input_block = input_data
+            input_block_mask = input_mask
+            for block_layer in self.block_layer_list:
+                output_block, output_block_mask = block_layer(input_block, input_block_mask)
+                input_block = output_block
+                input_block_mask = output_block_mask
+                output_block_list.append(output_block)
+                output_block_mask_list.append(output_block_mask)
+        
+        return output_block_list, output_block_mask_list
 
 class WordFeat(object):
     """word-level featurization layer"""
