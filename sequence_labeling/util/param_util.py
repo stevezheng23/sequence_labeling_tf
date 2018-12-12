@@ -218,6 +218,7 @@ def create_default_hyperparams(config_type):
             model_labeling_unit_dim=9,
             model_labeling_dropout=0.5,
             model_labeling_trainable=True,
+            model_labeling_restorable=True,
             device_num_gpus=1,
             device_default_gpu_id=0,
             device_log_device_placement=False,
