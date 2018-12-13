@@ -49,10 +49,13 @@ class SequenceCRF(BaseModel):
             
             self.variable_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             self.variable_lookup = {v.op.name: v for v in self.variable_list}
+            self.restorable_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+            self.restorable_lookup = {v.op.name: v for v in self.restorable_list}
             
             if self.hyperparams.train_ema_enable == True:
                 self.ema = tf.train.ExponentialMovingAverage(decay=self.hyperparams.train_ema_decay_rate)
                 self.variable_lookup = {self.ema.average_name(v): v for v in self.variable_list}
+                self.restorable_lookup = {self.ema.average_name(v): v for v in self.restorable_list}
             
             if self.mode == "train":
                 self.global_step = tf.get_variable("global_step", shape=[], dtype=tf.int32,
@@ -122,6 +125,7 @@ class SequenceCRF(BaseModel):
             
             self.ckpt_debug_dir = os.path.join(self.hyperparams.train_ckpt_output_dir, "debug")
             self.ckpt_epoch_dir = os.path.join(self.hyperparams.train_ckpt_output_dir, "epoch")
+            self.ckpt_transfer_dir = os.path.join(self.hyperparams.train_ckpt_output_dir, "transfer")
             
             if not tf.gfile.Exists(self.ckpt_debug_dir):
                 tf.gfile.MakeDirs(self.ckpt_debug_dir)
@@ -129,10 +133,15 @@ class SequenceCRF(BaseModel):
             if not tf.gfile.Exists(self.ckpt_epoch_dir):
                 tf.gfile.MakeDirs(self.ckpt_epoch_dir)
             
+            if not tf.gfile.Exists(self.ckpt_transfer_dir):
+                tf.gfile.MakeDirs(self.ckpt_transfer_dir)
+            
             self.ckpt_debug_name = os.path.join(self.ckpt_debug_dir, "model_debug_ckpt")
             self.ckpt_epoch_name = os.path.join(self.ckpt_epoch_dir, "model_epoch_ckpt")
+            self.ckpt_transfer_name = os.path.join(self.ckpt_transfer_dir, "model_transfer_ckpt")
             self.ckpt_debug_saver = tf.train.Saver(self.variable_lookup)
             self.ckpt_epoch_saver = tf.train.Saver(self.variable_lookup, max_to_keep=self.hyperparams.train_num_epoch)
+            self.ckpt_transfer_saver = tf.train.Saver(self.restorable_lookup)
     
     def _build_representation_layer(self,
                                     text_word,
@@ -349,6 +358,8 @@ class SequenceCRF(BaseModel):
             self.ckpt_debug_saver.restore(sess, ckpt_file)
         elif ckpt_type == "epoch":
             self.ckpt_epoch_saver.restore(sess, ckpt_file)
+        elif ckpt_type == "transfer":
+            self.ckpt_transfer_saver.restore(sess, ckpt_file)
         else:
             raise ValueError("unsupported checkpoint type {0}".format(ckpt_type))
     
@@ -357,36 +368,34 @@ class SequenceCRF(BaseModel):
         """get the latest checkpoint for sequence crf model"""
         if ckpt_type == "debug":
             ckpt_file = tf.train.latest_checkpoint(self.ckpt_debug_dir)
-            if ckpt_file is None:
-                raise FileNotFoundError("latest checkpoint file doesn't exist")
-            
-            return ckpt_file
         elif ckpt_type == "epoch":
             ckpt_file = tf.train.latest_checkpoint(self.ckpt_epoch_dir)
-            if ckpt_file is None:
-                raise FileNotFoundError("latest checkpoint file doesn't exist")
-            
-            return ckpt_file
+        elif ckpt_type == "transfer":
+            ckpt_file = tf.train.latest_checkpoint(self.ckpt_transfer_dir)
         else:
             raise ValueError("unsupported checkpoint type {0}".format(ckpt_type))
+        
+        if ckpt_file is None:
+            raise FileNotFoundError("latest checkpoint file doesn't exist")
+        
+        return ckpt_file
     
     def get_ckpt_list(self,
                       ckpt_type):
         """get checkpoint list for sequence crf model"""
         if ckpt_type == "debug":
             ckpt_state = tf.train.get_checkpoint_state(self.ckpt_debug_dir)
-            if ckpt_state is None:
-                raise FileNotFoundError("checkpoint files doesn't exist")
-            
-            return ckpt_state.all_model_checkpoint_paths
         elif ckpt_type == "epoch":
             ckpt_state = tf.train.get_checkpoint_state(self.ckpt_epoch_dir)
-            if ckpt_state is None:
-                raise FileNotFoundError("checkpoint files doesn't exist")
-            
-            return ckpt_state.all_model_checkpoint_paths
+        elif ckpt_type == "transfer":
+            ckpt_state = tf.train.get_checkpoint_state(self.ckpt_transfer_dir)
         else:
             raise ValueError("unsupported checkpoint type {0}".format(ckpt_type))
+        
+        if ckpt_state is None:
+            raise FileNotFoundError("checkpoint files doesn't exist")
+        
+        return ckpt_state.all_model_checkpoint_paths
 
 class WordFeat(object):
     """word-level featurization layer"""
