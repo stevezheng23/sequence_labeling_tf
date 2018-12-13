@@ -49,13 +49,13 @@ class SequenceCRF(BaseModel):
             
             self.variable_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             self.variable_lookup = {v.op.name: v for v in self.variable_list}
-            self.restorable_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
-            self.restorable_lookup = {v.op.name: v for v in self.restorable_list}
+            self.transferable_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+            self.transferable_lookup = {v.op.name: v for v in self.transferable_list}
             
             if self.hyperparams.train_ema_enable == True:
                 self.ema = tf.train.ExponentialMovingAverage(decay=self.hyperparams.train_ema_decay_rate)
                 self.variable_lookup = {self.ema.average_name(v): v for v in self.variable_list}
-                self.restorable_lookup = {self.ema.average_name(v): v for v in self.restorable_list}
+                self.transferable_lookup = {self.ema.average_name(v): v for v in self.transferable_list}
             
             if self.mode == "train":
                 self.global_step = tf.get_variable("global_step", shape=[], dtype=tf.int32,
@@ -138,10 +138,10 @@ class SequenceCRF(BaseModel):
             
             self.ckpt_debug_name = os.path.join(self.ckpt_debug_dir, "model_debug_ckpt")
             self.ckpt_epoch_name = os.path.join(self.ckpt_epoch_dir, "model_epoch_ckpt")
-            self.ckpt_transfer_name = os.path.join(self.ckpt_transfer_dir, "model_transfer_ckpt")
+            
             self.ckpt_debug_saver = tf.train.Saver(self.variable_lookup)
             self.ckpt_epoch_saver = tf.train.Saver(self.variable_lookup, max_to_keep=self.hyperparams.train_num_epoch)
-            self.ckpt_transfer_saver = tf.train.Saver(self.restorable_lookup)
+            self.ckpt_transfer_saver = tf.train.Saver(self.transferable_lookup)
     
     def _build_representation_layer(self,
                                     text_word,
@@ -387,8 +387,6 @@ class SequenceCRF(BaseModel):
             ckpt_state = tf.train.get_checkpoint_state(self.ckpt_debug_dir)
         elif ckpt_type == "epoch":
             ckpt_state = tf.train.get_checkpoint_state(self.ckpt_epoch_dir)
-        elif ckpt_type == "transfer":
-            ckpt_state = tf.train.get_checkpoint_state(self.ckpt_transfer_dir)
         else:
             raise ValueError("unsupported checkpoint type {0}".format(ckpt_type))
         
