@@ -118,9 +118,12 @@ def train(logger,
         init_model(eval_sess, eval_model)
         eval_logger = EvalLogger(hyperparams.data_log_output_dir)
     
+    if hyperparams.train_model_transferable == True:
+        ckpt_file = train_model.model.get_latest_ckpt("transfer")
+        load_model(train_sess, train_model, ckpt_file, "transfer")
+    
     logger.log_print("##### start training #####")
     global_step = 0
-    train_model.model.save(train_sess, global_step, "debug")
     for epoch in range(hyperparams.train_num_epoch):
         train_sess.run(train_model.data_pipeline.initializer)
         step_in_epoch = 0
@@ -185,7 +188,7 @@ def evaluate(logger,
     eval_logger = EvalLogger(hyperparams.data_log_output_dir)
     
     logger.log_print("##### start evaluation #####")
-    eval_mode = "debug" if enable_debug == True else "epoch"
+    eval_mode = "epoch"
     ckpt_file_list = eval_model.model.get_ckpt_list(eval_mode)
     for i, ckpt_file in enumerate(ckpt_file_list):
         extrinsic_eval(eval_logger, eval_summary_writer, eval_sess, eval_model,
@@ -206,10 +209,9 @@ def export(logger,
         online_sess = tf_debug.LocalCLIDebugWrapperSession(online_sess)
     
     logger.log_print("##### start exporting #####")
-    ckpt_type = "epoch"
-    ckpt_file = online_model.model.get_latest_ckpt(ckpt_type)
+    ckpt_file = online_model.model.get_latest_ckpt("epoch")
     online_sess.run([tf.global_variables_initializer(), tf.tables_initializer()])
-    online_model.model.restore(online_sess, ckpt_file, ckpt_type)
+    online_model.model.restore(online_sess, ckpt_file, "epoch")
     online_model.model.build(online_sess)
     logger.log_print("##### finish exporting #####")
 

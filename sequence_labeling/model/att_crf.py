@@ -49,10 +49,13 @@ class AttentionCRF(BaseModel):
             
             self.variable_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             self.variable_lookup = {v.op.name: v for v in self.variable_list}
+            self.transferable_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+            self.transferable_lookup = {v.op.name: v for v in self.transferable_list}
             
             if self.hyperparams.train_ema_enable == True:
                 self.ema = tf.train.ExponentialMovingAverage(decay=self.hyperparams.train_ema_decay_rate)
                 self.variable_lookup = {self.ema.average_name(v): v for v in self.variable_list}
+                self.transferable_lookup = {self.ema.average_name(v): v for v in self.transferable_list}
             
             if self.mode == "train":
                 self.global_step = tf.get_variable("global_step", shape=[], dtype=tf.int32,
@@ -131,8 +134,10 @@ class AttentionCRF(BaseModel):
             
             self.ckpt_debug_name = os.path.join(self.ckpt_debug_dir, "model_debug_ckpt")
             self.ckpt_epoch_name = os.path.join(self.ckpt_epoch_dir, "model_epoch_ckpt")
+            
             self.ckpt_debug_saver = tf.train.Saver(self.variable_lookup)
             self.ckpt_epoch_saver = tf.train.Saver(self.variable_lookup, max_to_keep=self.hyperparams.train_num_epoch)
+            self.ckpt_transfer_saver = tf.train.Saver(self.transferable_lookup)
     
     def _build_representation_layer(self,
                                     text_word,
@@ -356,6 +361,8 @@ class AttentionCRF(BaseModel):
             self.ckpt_debug_saver.restore(sess, ckpt_file)
         elif ckpt_type == "epoch":
             self.ckpt_epoch_saver.restore(sess, ckpt_file)
+        elif ckpt_type == "transfer":
+            self.ckpt_transfer_saver.restore(sess, ckpt_file)
         else:
             raise ValueError("unsupported checkpoint type {0}".format(ckpt_type))
     
@@ -364,36 +371,32 @@ class AttentionCRF(BaseModel):
         """get the latest checkpoint for attention crf model"""
         if ckpt_type == "debug":
             ckpt_file = tf.train.latest_checkpoint(self.ckpt_debug_dir)
-            if ckpt_file is None:
-                raise FileNotFoundError("latest checkpoint file doesn't exist")
-            
-            return ckpt_file
         elif ckpt_type == "epoch":
             ckpt_file = tf.train.latest_checkpoint(self.ckpt_epoch_dir)
-            if ckpt_file is None:
-                raise FileNotFoundError("latest checkpoint file doesn't exist")
-            
-            return ckpt_file
+        elif ckpt_type == "transfer":
+            ckpt_file = tf.train.latest_checkpoint(self.ckpt_transfer_dir)
         else:
             raise ValueError("unsupported checkpoint type {0}".format(ckpt_type))
+        
+        if ckpt_file is None:
+            raise FileNotFoundError("latest checkpoint file doesn't exist")
+        
+        return ckpt_file
     
     def get_ckpt_list(self,
                       ckpt_type):
         """get checkpoint list for attention crf model"""
         if ckpt_type == "debug":
             ckpt_state = tf.train.get_checkpoint_state(self.ckpt_debug_dir)
-            if ckpt_state is None:
-                raise FileNotFoundError("checkpoint files doesn't exist")
-            
-            return ckpt_state.all_model_checkpoint_paths
         elif ckpt_type == "epoch":
             ckpt_state = tf.train.get_checkpoint_state(self.ckpt_epoch_dir)
-            if ckpt_state is None:
-                raise FileNotFoundError("checkpoint files doesn't exist")
-            
-            return ckpt_state.all_model_checkpoint_paths
         else:
             raise ValueError("unsupported checkpoint type {0}".format(ckpt_type))
+        
+        if ckpt_state is None:
+            raise FileNotFoundError("checkpoint files doesn't exist")
+        
+        return ckpt_state.all_model_checkpoint_paths
 
 class AttentionBlock(object):
     """attention-block layer"""
