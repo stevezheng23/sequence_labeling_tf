@@ -1,13 +1,13 @@
 import numpy as np
 import tensorflow as tf
 
-__all__ = ["EPSILON", "MAX_INT", "MIN_FLOAT", "INTRANSFERABLE_VARIABLES",
+__all__ = ["EPSILON", "MAX_INT", "MIN_FLOAT", "TRANSFERABLE_VARIABLES",
            "check_tensorflow_version", "safe_exp", "get_config_proto", "get_device_spec"]
 
 EPSILON = 1e-30
 MAX_INT = 2147483647
 MIN_FLOAT = -1e30
-INTRANSFERABLE_VARIABLES = "intransferable_variables"
+TRANSFERABLE_VARIABLES = "transferable_variables"
 
 def check_tensorflow_version():
     """check tensorflow version in current environment"""

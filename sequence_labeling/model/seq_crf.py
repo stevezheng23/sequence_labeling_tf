@@ -49,7 +49,8 @@ class SequenceCRF(BaseModel):
             
             self.variable_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             self.variable_lookup = {v.op.name: v for v in self.variable_list}
-            self.transferable_list = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+            
+            self.transferable_list = tf.get_collection(TRANSFERABLE_VARIABLES)
             self.transferable_lookup = {v.op.name: v for v in self.transferable_list}
             
             if self.hyperparams.train_ema_enable == True:
@@ -232,6 +233,7 @@ class SequenceCRF(BaseModel):
         labeling_unit_dim = self.hyperparams.model_labeling_unit_dim
         labeling_dropout = self.hyperparams.model_labeling_dropout
         labeling_trainable = self.hyperparams.model_labeling_trainable
+        labeling_transferable = self.hyperparams.model_labeling_transferable
         random_seed = self.hyperparams.train_random_seed
         
         with tf.variable_scope("modeling", reuse=tf.AUTO_REUSE):
@@ -242,6 +244,9 @@ class SequenceCRF(BaseModel):
             
             (text_sequence_modeling, text_sequence_modeling_mask,
                 _, _) = sequence_modeling_layer(text_feat, text_feat_mask)
+            
+            if labeling_transferable == False:
+                pre_labeling_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             
             labeling_modeling_layer = create_dense_layer("single", 1, labeling_unit_dim, 1, "", [labeling_dropout], None,
                 False, False, True, self.num_gpus, self.default_gpu_id, self.regularizer, random_seed, labeling_trainable)
@@ -255,6 +260,10 @@ class SequenceCRF(BaseModel):
             weight_initializer = create_variable_initializer("glorot_uniform", random_seed)
             text_modeling_matrix = tf.get_variable("transition_matrix", shape=[labeling_unit_dim, labeling_unit_dim],
                 initializer=weight_initializer, regularizer=self.regularizer, trainable=labeling_trainable, dtype=tf.float32)
+            
+            if labeling_transferable == False:
+                post_labeling_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
+                [tf.add_to_collection(TRANSFERABLE_VARIABLES, v) for v in post_labeling_variables if v in pre_labeling_variables]
         
         return text_modeling, text_modeling_mask, text_modeling_matrix
      
