@@ -142,7 +142,8 @@ class SequenceCRF(BaseModel):
             
             self.ckpt_debug_saver = tf.train.Saver(self.variable_lookup)
             self.ckpt_epoch_saver = tf.train.Saver(self.variable_lookup, max_to_keep=self.hyperparams.train_num_epoch)
-            self.ckpt_transfer_saver = tf.train.Saver(self.transferable_lookup)
+            self.ckpt_transfer_saver = (tf.train.Saver(self.transferable_lookup)
+                if any(self.transferable_lookup) else tf.train.Saver(self.variable_lookup))
     
     def _build_representation_layer(self,
                                     text_word,
