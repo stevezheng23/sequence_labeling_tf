@@ -449,11 +449,8 @@ class Attention(object):
             input_attention_score = _generate_attention_score(input_src_attention,
                 input_trg_attention, self.attention_matrix, self.score_type)
             input_attention_mask = _generate_attention_mask(input_src_attention_mask, input_trg_attention_mask, self.is_self)
-            output_attention_score = input_attention_score
-            output_score_mask = input_attention_mask
-            
             input_attention_weight = softmax_with_mask(input_attention_score,
-                input_attention_mask, axis=-1, keepdims=True)
+                input_attention_mask, axis=-1, keepdims=True) * input_attention_mask
             input_attention = tf.matmul(input_attention_weight, input_trg_attention)
             
             if self.residual_connect == True and self.is_self == True:
@@ -562,7 +559,7 @@ class MaxAttention(object):
             input_attention_score = tf.reduce_max(input_attention_score, axis=-1, keepdims=True)
             input_attention_mask = tf.reduce_max(input_attention_mask, axis=-1, keepdims=True)
             input_attention_weight = softmax_with_mask(input_attention_score,
-                input_attention_mask, axis=1, keepdims=True)
+                input_attention_mask, axis=1, keepdims=True) * input_attention_mask
             input_attention_weight = tf.transpose(input_attention_weight, perm=[0, 2, 1])
             input_attention = tf.matmul(input_attention_weight, input_src_attention)
             src_max_length = tf.shape(input_src_attention)[1]
@@ -672,9 +669,9 @@ class CoAttention(object):
                 input_trg_attention, self.attention_matrix, self.score_type)
             input_attention_mask = _generate_attention_mask(input_src_attention_mask, input_trg_attention_mask, self.is_self)
             input_attention_s2t_weight = softmax_with_mask(input_attention_score,
-                input_attention_mask, axis=-1, keepdims=True)
+                input_attention_mask, axis=-1, keepdims=True) * input_attention_mask
             input_attention_t2s_weight = softmax_with_mask(input_attention_score,
-                input_attention_mask, axis=1, keepdims=True)
+                input_attention_mask, axis=1, keepdims=True) * input_attention_mask
             input_attention_t2s_weight = tf.transpose(input_attention_t2s_weight, perm=[0, 2, 1])
             input_attention = tf.matmul(input_attention_t2s_weight, input_src_attention)
             input_attention = tf.matmul(input_attention_s2t_weight, input_attention)
@@ -791,9 +788,8 @@ class GatedAttention(object):
             input_attention_score = _generate_attention_score(input_src_attention,
                 input_trg_attention, self.attention_matrix, self.score_type)
             input_attention_mask = _generate_attention_mask(input_src_attention_mask, input_trg_attention_mask, self.is_self)
-            
             input_attention_weight = softmax_with_mask(input_attention_score,
-                input_attention_mask, axis=-1, keepdims=True)
+                input_attention_mask, axis=-1, keepdims=True) * input_attention_mask
             input_attention = tf.matmul(input_attention_weight, input_trg_attention)
             
             if self.residual_connect == True and self.is_self == True:
@@ -908,7 +904,7 @@ class HeadAttention(object):
                 input_key_attention, self.attention_matrix, self.score_type)
             input_attention_mask = _generate_attention_mask(input_src_attention_mask, input_trg_attention_mask, self.is_self)
             input_attention_weight = softmax_with_mask(input_attention_score,
-                input_attention_mask, axis=-1, keepdims=True)
+                input_attention_mask, axis=-1, keepdims=True) * input_attention_mask
             output_attention = tf.matmul(input_attention_weight, input_value_attention)
             output_mask = input_src_mask
             
