@@ -180,8 +180,8 @@ class SequenceCRF(BaseModel):
             if word_feat_enable == True:
                 self.logger.log_print("# build word-level representation layer")
                 word_feat_layer = WordFeat(vocab_size=self.word_vocab_size, embed_dim=word_embed_dim,
-                    dropout=word_dropout, pretrained=word_embed_pretrained, random_seed=random_seed,
-                    feedable=word_feat_feedable, trainable=word_feat_trainable)
+                    dropout=word_dropout, pretrained=word_embed_pretrained, regularizer=self.regularizer,
+                    random_seed=random_seed, feedable=word_feat_feedable, trainable=word_feat_trainable)
                 
                 (text_word_feat,
                     text_word_feat_mask) = word_feat_layer(text_word, text_word_mask)
@@ -412,6 +412,7 @@ class WordFeat(object):
                  embed_dim,
                  dropout,
                  pretrained,
+                 regularizer=None,
                  random_seed=0,
                  feedable=True,
                  trainable=True,
@@ -421,6 +422,7 @@ class WordFeat(object):
         self.embed_dim = embed_dim
         self.dropout = dropout
         self.pretrained = pretrained
+        self.regularizer = regularizer
         self.random_seed = random_seed
         self.feedable = feedable
         self.trainable = trainable
@@ -428,7 +430,7 @@ class WordFeat(object):
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             self.embedding_layer = create_embedding_layer(self.vocab_size,
-                self.embed_dim, self.pretrained, 0, 0, self.random_seed, self.feedable, self.trainable)
+                self.embed_dim, self.pretrained, 0, 0, self.regularizer, self.random_seed, self.feedable, self.trainable)
             
             self.dropout_layer = create_dropout_layer(self.dropout, 0, 0, self.random_seed)
     
@@ -485,7 +487,7 @@ class CharFeat(object):
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             self.embedding_layer = create_embedding_layer(self.vocab_size,
-                self.embed_dim, False, 0, 0, self.random_seed, False, self.trainable)
+                self.embed_dim, False, 0, 0, self.regularizer, self.random_seed, False, self.trainable)
             
             self.conv_layer = create_convolution_layer("stacked_multi_1d", 1, self.embed_dim,
                 self.unit_dim, self.window_size, 1, "SAME", self.activation, [self.dropout], None,

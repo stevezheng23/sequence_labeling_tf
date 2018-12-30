@@ -176,8 +176,8 @@ class AttentionCRF(BaseModel):
             if word_feat_enable == True:
                 self.logger.log_print("# build word-level representation layer")
                 word_feat_layer = WordFeat(vocab_size=self.word_vocab_size, embed_dim=word_embed_dim,
-                    dropout=word_dropout, pretrained=word_embed_pretrained, random_seed=random_seed,
-                    feedable=word_feat_feedable, trainable=word_feat_trainable)
+                    dropout=word_dropout, pretrained=word_embed_pretrained, regularizer=self.regularizer,
+                    random_seed=random_seed, feedable=word_feat_feedable, trainable=word_feat_trainable)
                 
                 (text_word_feat,
                     text_word_feat_mask) = word_feat_layer(text_word, text_word_mask)
@@ -224,6 +224,7 @@ class AttentionCRF(BaseModel):
         attention_unit_dim = self.hyperparams.model_attention_unit_dim
         attention_hidden_activation = self.hyperparams.model_attention_hidden_activation
         attention_dropout = self.hyperparams.model_attention_dropout if self.mode == "train" else 0.0
+        attention_att_dropout = self.hyperparams.model_attention_att_dropout if self.mode == "train" else 0.0
         attention_layer_dropout = self.hyperparams.model_attention_layer_dropout if self.mode == "train" else 0.0
         attention_trainable = self.hyperparams.model_attention_trainable
         labeling_unit_dim = self.hyperparams.model_labeling_unit_dim
@@ -235,14 +236,15 @@ class AttentionCRF(BaseModel):
         with tf.variable_scope("modeling", reuse=tf.AUTO_REUSE):
             self.logger.log_print("# build attention modeling layer")
             position_modeling_layer = create_position_layer("sin_pos", attention_unit_dim, 0, 10000,
-                self.num_gpus, self.default_gpu_id, random_seed, False)
+                self.num_gpus, self.default_gpu_id, self.regularizer, random_seed, False)
             
             text_position_modeling, text_position_modeling_mask = position_modeling_layer(text_feat, text_feat_mask)
             
-            attention_modeling_layer = StackedAttentionBlock(num_layer=attention_num_layer, num_head=attention_num_head,
-                unit_dim=attention_unit_dim, activation=attention_hidden_activation, dropout=attention_dropout,
-                layer_dropout=attention_layer_dropout, num_gpus=self.num_gpus, default_gpu_id=self.default_gpu_id,
-                regularizer=self.regularizer, random_seed=random_seed, trainable=attention_trainable)
+            attention_modeling_layer = StackedAttentionBlock(num_layer=attention_num_layer,
+                num_head=attention_num_head, unit_dim=attention_unit_dim, activation=attention_hidden_activation,
+                dropout=attention_dropout, att_dropout=attention_att_dropout, layer_dropout=attention_layer_dropout,
+                num_gpus=self.num_gpus, default_gpu_id=self.default_gpu_id, regularizer=self.regularizer,
+                random_seed=random_seed, trainable=attention_trainable)
             
             (text_attention_modeling_list,
                 text_attention_modeling_mask_list) = attention_modeling_layer(text_position_modeling, text_position_modeling_mask)
@@ -415,6 +417,7 @@ class AttentionBlock(object):
                  unit_dim,
                  activation,
                  dropout,
+                 att_dropout,
                  layer_dropout,
                  num_gpus=1,
                  default_gpu_id=0,
@@ -426,7 +429,8 @@ class AttentionBlock(object):
         self.num_head = num_head
         self.unit_dim = unit_dim
         self.activation = activation
-        self.enable_dropout, self.dropout = dropout
+        self.dropout = dropout
+        self.att_dropout = att_dropout
         self.sublayer_skip, self.num_sublayer, self.layer_dropout = layer_dropout
         self.num_gpus = num_gpus
         self.default_gpu_id = default_gpu_id
@@ -436,9 +440,6 @@ class AttentionBlock(object):
         self.scope = scope
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
-            if self.enable_dropout == True:
-                self.dropout_layer = create_dropout_layer(self.dropout, self.num_gpus, self.default_gpu_id, self.random_seed)
-            
             if unit_dim % num_head != 0 or unit_dim / num_head == 0:
                 raise ValueError("unit dim {0} and # head {1} mis-match".format(unit_dim, num_head))
             
@@ -448,28 +449,26 @@ class AttentionBlock(object):
                 att_dim = [head_dim, head_dim, head_dim]
                 att_dim_list.append(att_dim)
             
-            attention_layer_dropout = self.layer_dropout * float(self.sublayer_skip) / self.num_sublayer
+            att_layer_dropout = self.layer_dropout * float(self.sublayer_skip) / self.num_sublayer
             self.attention_layer = create_attention_layer("multi_head_att", self.unit_dim,
-                self.unit_dim, att_dim_list, "scaled_dot", attention_layer_dropout, True, True, True,
+                self.unit_dim, att_dim_list, "scaled_dot", self.dropout, self.att_dropout, att_layer_dropout, True, True, True,
                 None, self.num_gpus, self.default_gpu_id, self.regularizer, self.random_seed, self.trainable)
             
             dense_layer_dropout = [self.layer_dropout * float(self.sublayer_skip + 1) / self.num_sublayer]
             self.dense_layer = create_dense_layer("double", 1, self.unit_dim, 4, self.activation, [self.dropout],
                 dense_layer_dropout, True, True, True, num_gpus, default_gpu_id, self.regularizer, self.random_seed, self.trainable)
+            
+            self.dropout_layer = create_dropout_layer(self.dropout, self.num_gpus, self.default_gpu_id, self.random_seed)
     
     def __call__(self,
                  input_data,
                  input_mask):
         """call attention-block layer"""
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
-            if self.enable_dropout == True:
-                input_data, input_mask = self.dropout_layer(input_data, input_mask)
-            
             input_attention, input_attention_mask = self.attention_layer(input_data, input_data, input_mask, input_mask)
             input_dense, input_dense_mask = self.dense_layer(input_attention, input_attention_mask)
             
-            output_block = input_dense
-            output_block_mask = input_dense_mask
+            output_block, output_block_mask = self.dropout_layer(input_dense, input_dense_mask)
         
         return output_block, output_block_mask
 
@@ -481,6 +480,7 @@ class StackedAttentionBlock(object):
                  unit_dim,
                  activation,
                  dropout,
+                 att_dropout,
                  layer_dropout,
                  num_gpus=1,
                  default_gpu_id=0,
@@ -494,6 +494,7 @@ class StackedAttentionBlock(object):
         self.unit_dim = unit_dim
         self.activation = activation
         self.dropout = dropout
+        self.att_dropout = att_dropout
         self.layer_dropout = layer_dropout
         self.num_gpus = num_gpus
         self.default_gpu_id = default_gpu_id
@@ -507,11 +508,10 @@ class StackedAttentionBlock(object):
             num_sublayer = 2 * self.num_layer
             for i in range(self.num_layer):
                 layer_scope = "layer_{0}".format(i)
-                enable_dropout = True if i % 2 == 0 else False
                 sublayer_skip = 2 * i
                 layer_default_gpu_id = self.default_gpu_id + i
                 block_layer = AttentionBlock(num_head=self.num_head, unit_dim=self.unit_dim, activation=self.activation,
-                    dropout=(enable_dropout, self.dropout), layer_dropout=(sublayer_skip, num_sublayer, self.layer_dropout),
+                    dropout=self.dropout, att_dropout=self.att_dropout, layer_dropout=(sublayer_skip, num_sublayer, self.layer_dropout),
                     num_gpus=self.num_gpus, default_gpu_id=layer_default_gpu_id, regularizer=self.regularizer,
                     random_seed=self.random_seed, trainable=self.trainable, scope=layer_scope)
                 self.block_layer_list.append(block_layer)
@@ -541,6 +541,7 @@ class WordFeat(object):
                  embed_dim,
                  dropout,
                  pretrained,
+                 regularizer=None,
                  random_seed=0,
                  feedable=True,
                  trainable=True,
@@ -550,6 +551,7 @@ class WordFeat(object):
         self.embed_dim = embed_dim
         self.dropout = dropout
         self.pretrained = pretrained
+        self.regularizer = regularizer
         self.random_seed = random_seed
         self.feedable = feedable
         self.trainable = trainable
@@ -557,7 +559,7 @@ class WordFeat(object):
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             self.embedding_layer = create_embedding_layer(self.vocab_size,
-                self.embed_dim, self.pretrained, 0, 0, self.random_seed, self.feedable, self.trainable)
+                self.embed_dim, self.pretrained, 0, 0, self.regularizer, self.random_seed, self.feedable, self.trainable)
             
             self.dropout_layer = create_dropout_layer(self.dropout, 0, 0, self.random_seed)
     
@@ -614,7 +616,7 @@ class CharFeat(object):
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             self.embedding_layer = create_embedding_layer(self.vocab_size,
-                self.embed_dim, False, 0, 0, self.random_seed, False, self.trainable)
+                self.embed_dim, False, 0, 0, self.regularizer, self.random_seed, False, self.trainable)
             
             self.conv_layer = create_convolution_layer("stacked_multi_1d", 1, self.embed_dim,
                 self.unit_dim, self.window_size, 1, "SAME", self.activation, [self.dropout], None,
