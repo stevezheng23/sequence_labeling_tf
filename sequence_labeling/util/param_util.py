@@ -216,6 +216,7 @@ def create_default_hyperparams(config_type):
             model_attention_unit_dim=400,
             model_attention_hidden_activation="relu",
             model_attention_dropout=0.5,
+            model_attention_att_dropout=0.0,
             model_attention_layer_dropout=0.1,
             model_attention_trainable=True,
             model_labeling_unit_dim=9,

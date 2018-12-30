@@ -13,12 +13,14 @@ class Embedding(object):
                  embed_dim,
                  num_gpus=0,
                  default_gpu_id=0,
+                 regularizer=None,
                  random_seed=0,
                  trainable=True,
                  scope="embedding"):
         """initialize embedding layer"""
         self.vocab_size = vocab_size
         self.embed_dim = embed_dim
+        self.regularizer = regularizer if trainable == True else None
         self.random_seed = random_seed
         self.trainable = trainable
         self.scope = scope
@@ -27,7 +29,7 @@ class Embedding(object):
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device('/CPU:0'):
             initializer = create_variable_initializer("glorot_uniform", self.random_seed)
             self.embedding = tf.get_variable("embedding", shape=[self.vocab_size, self.embed_dim],
-                initializer=initializer, trainable=self.trainable, dtype=tf.float32)
+                initializer=initializer, regularizer=self.regularizer, trainable=self.trainable, dtype=tf.float32)
             self.embedding_placeholder = None
     
     def __call__(self,
@@ -49,12 +51,14 @@ class PretrainedEmbedding(object):
                  embed_dim,
                  num_gpus=0,
                  default_gpu_id=0,
+                 regularizer=None,
                  feedable=True,
                  trainable=True,
                  scope="pretrained_embedding"):
         """initialize pretrained embedding layer"""
         self.vocab_size = vocab_size
         self.embed_dim = embed_dim
+        self.regularizer = regularizer if trainable == True else None
         self.feedable = feedable
         self.trainable = trainable
         self.scope = scope
@@ -63,7 +67,7 @@ class PretrainedEmbedding(object):
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device('/CPU:0'):
             initializer = create_variable_initializer("zero")
             embedding = tf.get_variable("pretrained_embedding", shape=[self.vocab_size, self.embed_dim],
-                initializer=initializer, trainable=self.trainable, dtype=tf.float32)
+                initializer=initializer, regularizer=self.regularizer, trainable=self.trainable, dtype=tf.float32)
             
             if self.feedable == True:
                 self.embedding_placeholder = tf.placeholder(name="embedding_placeholder",
