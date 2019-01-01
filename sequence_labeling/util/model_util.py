@@ -140,6 +140,8 @@ def get_model_creator(model_type):
         model_creator = SequenceCRF
     elif model_type == "att_crf":
         model_creator = AttentionCRF
+    elif model_type == "seq_softmax":
+        model_creator = SequenceSoftmax
     else:
         raise ValueError("can not create model with unsupported model type {0}".format(model_type))
     
