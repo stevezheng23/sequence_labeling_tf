@@ -5,6 +5,7 @@ import tensorflow as tf
 
 from model.seq_crf import *
 from model.att_crf import *
+from model.seq_softmax import *
 from util.data_util import *
 
 __all__ = ["TrainModel", "EvalModel", "OnlineModel",
