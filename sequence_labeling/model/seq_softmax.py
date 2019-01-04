@@ -66,7 +66,8 @@ class SequenceSoftmax(BaseModel):
                 
                 """compute optimization loss"""
                 self.logger.log_print("# setup loss computation mechanism")
-                self.train_loss = self._compute_loss(label, label_mask, predict, predict_mask, self.sequence_length)
+                self.train_loss = self._compute_loss(label, label_mask,
+                    predict, predict_mask, self.hyperparams.train_label_smoothing)
                 
                 if self.hyperparams.train_regularization_enable == True:
                     regularization_variables = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
@@ -285,12 +286,19 @@ class SequenceSoftmax(BaseModel):
                       label,
                       label_mask,
                       predict,
-                      predict_mask):
+                      predict_mask,
+                      label_smoothing):
         """compute optimization loss"""
         masked_predict = generate_masked_data(predict, predict_mask)
         masked_label = tf.cast(label * label_mask, dtype=tf.int32)
-        onehot_label = generate_onehot_label(masked_label, tf.shape(masked_predict)[-1])
-        cross_entropy = tf.nn.softmax_cross_entropy_with_logits_v2(logits=masked_predict, labels=onehot_label)
+        
+        if label_smoothing > 1e-10:
+            onehot_label = generate_onehot_label(masked_label, tf.shape(masked_predict)[-1])
+            cross_entropy = tf.losses.softmax_cross_entropy(onehot_labels=onehot_label,
+                logits=masked_predict, label_smoothing=label_smoothing)
+        else:
+            cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=masked_label, logits=masked_predict)
+        
         loss = tf.reduce_sum(cross_entropy * tf.squeeze(predict_mask, axis=-1)) / tf.cast(self.batch_size, dtype=tf.float32)
         
         return loss
