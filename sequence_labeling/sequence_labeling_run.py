@@ -17,8 +17,10 @@ from util.eval_logger import *
 from util.summary_writer import *
 
 def add_arguments(parser):
-    parser.add_argument("--mode", help="mode to run", required=True)
+    parser.add_argument("--mode", help="running mode", required=True)
     parser.add_argument("--config", help="path to json config", required=True)
+    parser.add_argument("--mount", help="path to mount storage", required=True)
+    parser.add_argument("--experiment", help="experiment name", required=True)
 
 def extrinsic_eval(logger,
                    summary_writer,
@@ -215,8 +217,38 @@ def export(logger,
     online_model.model.build(online_sess)
     logger.log_print("##### finish exporting #####")
 
+def update_hyperparams(hyperparams,
+                       mount_path,
+                       experiment_name):
+    hyperparams.set_hparam("data_train_sequence_file",
+        os.path.join(mount_path, hyperparams.data_train_sequence_file))
+    hyperparams.set_hparam("data_eval_sequence_file",
+        os.path.join(mount_path, hyperparams.data_eval_sequence_file))
+    hyperparams.set_hparam("data_embedding_file",
+        os.path.join(mount_path, hyperparams.data_embedding_file))
+    hyperparams.set_hparam("data_full_embedding_file",
+        os.path.join(mount_path, hyperparams.data_full_embedding_file))
+    hyperparams.set_hparam("data_word_vocab_file",
+        os.path.join(mount_path, hyperparams.data_word_vocab_file))
+    hyperparams.set_hparam("data_char_vocab_file",
+        os.path.join(mount_path, hyperparams.data_char_vocab_file))
+    hyperparams.set_hparam("data_label_vocab_file",
+        os.path.join(mount_path, hyperparams.data_label_vocab_file))
+    hyperparams.set_hparam("data_log_output_dir",
+        os.path.join(mount_path, experiment_name, hyperparams.data_log_output_dir))
+    hyperparams.set_hparam("data_result_output_dir",
+        os.path.join(mount_path, experiment_name, hyperparams.data_result_output_dir))
+    hyperparams.set_hparam("train_model_output_dir",
+        os.path.join(mount_path, experiment_name, hyperparams.train_model_output_dir))
+    hyperparams.set_hparam("train_ckpt_output_dir",
+        os.path.join(mount_path, experiment_name, hyperparams.train_ckpt_output_dir))
+    hyperparams.set_hparam("train_summary_output_dir",
+        os.path.join(mount_path, experiment_name, hyperparams.train_summary_output_dir))
+
 def main(args):
     hyperparams = load_hyperparams(args.config)
+    update_hyperparams(hyperparams, args.mount, args.experiment)
+    
     logger = DebugLogger(hyperparams.data_log_output_dir)
     
     tf_version = check_tensorflow_version()
