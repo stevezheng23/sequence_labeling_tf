@@ -235,7 +235,7 @@ class AttentionCRF(BaseModel):
         
         with tf.variable_scope("modeling", reuse=tf.AUTO_REUSE):
             self.logger.log_print("# build attention modeling layer")
-            position_modeling_layer = create_position_layer("sin_pos", attention_unit_dim, 0, 10000,
+            position_modeling_layer = create_position_layer("sin_pos", 0, 0, 1, 10000,
                 self.num_gpus, self.default_gpu_id, self.regularizer, random_seed, False)
             
             text_position_modeling, text_position_modeling_mask = position_modeling_layer(text_feat, text_feat_mask)
