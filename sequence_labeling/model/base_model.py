@@ -54,6 +54,19 @@ class BaseModel(object):
         
         self.random_seed = self.hyperparams.train_random_seed if self.hyperparams.train_enable_debugging else None
     
+    def _get_exponential_moving_average(self,
+                                        num_steps):
+        decay_rate = self.hyperparams.train_ema_decay_rate
+        enable_debias = self.hyperparams.train_ema_enable_debias
+        enable_dynamic_decay = self.hyperparams.train_ema_enable_dynamic_decay
+        
+        if enable_dynamic_decay == True:
+            ema = tf.train.ExponentialMovingAverage(decay=decay_rate, num_updates=num_steps, zero_debias=enable_debias)
+        else:
+            ema = tf.train.ExponentialMovingAverage(decay=decay_rate, zero_debias=enable_debias)
+        
+        return ema
+    
     def _apply_learning_rate_warmup(self,
                                     learning_rate):
         """apply learning rate warmup"""
