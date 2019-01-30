@@ -170,7 +170,6 @@ class SequenceSoftmax(BaseModel):
         fusion_hidden_activation = self.hyperparams.model_fusion_hidden_activation
         fusion_dropout = self.hyperparams.model_fusion_dropout if self.mode == "train" else 0.0
         fusion_trainable = self.hyperparams.model_fusion_trainable
-        random_seed = self.hyperparams.train_random_seed
         
         with tf.variable_scope("representation", reuse=tf.AUTO_REUSE):
             text_feat_list = []
@@ -180,7 +179,7 @@ class SequenceSoftmax(BaseModel):
                 self.logger.log_print("# build word-level representation layer")
                 word_feat_layer = WordFeat(vocab_size=self.word_vocab_size, embed_dim=word_embed_dim,
                     dropout=word_dropout, pretrained=word_embed_pretrained, regularizer=self.regularizer,
-                    random_seed=random_seed, feedable=word_feat_feedable, trainable=word_feat_trainable)
+                    random_seed=self.random_seed, feedable=word_feat_feedable, trainable=word_feat_trainable)
                 
                 (text_word_feat,
                     text_word_feat_mask) = word_feat_layer(text_word, text_word_mask)
@@ -198,7 +197,7 @@ class SequenceSoftmax(BaseModel):
                 char_feat_layer = CharFeat(vocab_size=self.char_vocab_size, embed_dim=char_embed_dim, unit_dim=char_unit_dim,
                     window_size=char_window_size, activation=char_hidden_activation, pooling_type=char_pooling_type,
                     dropout=char_dropout, num_gpus=self.num_gpus, default_gpu_id=self.default_gpu_id,
-                    regularizer=self.regularizer, random_seed=random_seed, trainable=char_feat_trainable)
+                    regularizer=self.regularizer, random_seed=self.random_seed, trainable=char_feat_trainable)
                 
                 (text_char_feat,
                     text_char_feat_mask) = char_feat_layer(text_char, text_char_mask)
@@ -212,7 +211,7 @@ class SequenceSoftmax(BaseModel):
             feat_fusion_layer = FusionModule(input_unit_dim=feat_unit_dim, output_unit_dim=fusion_unit_dim,
                 fusion_type=fusion_type, num_layer=fusion_num_layer, activation=fusion_hidden_activation,
                 dropout=fusion_dropout, num_gpus=self.num_gpus, default_gpu_id=self.default_gpu_id,
-                regularizer=self.regularizer, random_seed=random_seed, trainable=fusion_trainable)
+                regularizer=self.regularizer, random_seed=self.random_seed, trainable=fusion_trainable)
             
             text_feat, text_feat_mask = feat_fusion_layer(text_feat_list, text_feat_mask_list)
         
@@ -234,13 +233,12 @@ class SequenceSoftmax(BaseModel):
         labeling_dropout = self.hyperparams.model_labeling_dropout
         labeling_trainable = self.hyperparams.model_labeling_trainable
         labeling_transferable = self.hyperparams.model_labeling_transferable
-        random_seed = self.hyperparams.train_random_seed
         
         with tf.variable_scope("modeling", reuse=tf.AUTO_REUSE):
             self.logger.log_print("# build sequence modeling layer")
             sequence_modeling_layer = create_recurrent_layer("bi", sequence_num_layer, sequence_unit_dim,
                 sequence_cell_type, sequence_hidden_activation, sequence_dropout, sequence_forget_bias,
-                sequence_residual_connect, None, self.num_gpus, self.default_gpu_id, random_seed, sequence_trainable)
+                sequence_residual_connect, None, self.num_gpus, self.default_gpu_id, self.random_seed, sequence_trainable)
             
             (text_sequence_modeling, text_sequence_modeling_mask,
                 _, _) = sequence_modeling_layer(text_feat, text_feat_mask)
@@ -249,7 +247,7 @@ class SequenceSoftmax(BaseModel):
                 pre_labeling_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             
             labeling_modeling_layer = create_dense_layer("single", 1, labeling_unit_dim, 1, "", [labeling_dropout], None,
-                False, False, True, self.num_gpus, self.default_gpu_id, self.regularizer, random_seed, labeling_trainable)
+                False, False, True, self.num_gpus, self.default_gpu_id, self.regularizer, self.random_seed, labeling_trainable)
             
             (text_labeling_modeling,
                 text_labeling_modeling_mask) = labeling_modeling_layer(text_sequence_modeling, text_sequence_modeling_mask)

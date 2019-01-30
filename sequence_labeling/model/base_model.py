@@ -51,6 +51,8 @@ class BaseModel(object):
                 self.hyperparams.train_regularization_scale)
         else:
             self.regularizer = None
+        
+        self.random_seed = self.hyperparams.train_random_seed if self.hyperparams.train_enable_debugging else None
     
     def _apply_learning_rate_warmup(self,
                                     learning_rate):
