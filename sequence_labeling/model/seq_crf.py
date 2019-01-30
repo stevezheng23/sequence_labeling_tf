@@ -428,7 +428,7 @@ class WordFeat(object):
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             self.embedding_layer = create_embedding_layer(self.vocab_size,
-                self.embed_dim, self.pretrained, 0, 0, self.regularizer, self.random_seed, self.feedable, self.trainable)
+                self.embed_dim, self.pretrained, 0, 0, None, self.random_seed, self.feedable, self.trainable)
             
             self.dropout_layer = create_dropout_layer(self.dropout, 0, 0, self.random_seed)
     
@@ -485,7 +485,7 @@ class CharFeat(object):
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             self.embedding_layer = create_embedding_layer(self.vocab_size,
-                self.embed_dim, False, 0, 0, self.regularizer, self.random_seed, False, self.trainable)
+                self.embed_dim, False, 0, 0, None, self.random_seed, False, self.trainable)
             
             self.conv_layer = create_convolution_layer("stacked_multi_1d", 1, self.embed_dim,
                 self.unit_dim, self.window_size, 1, "SAME", self.activation, [self.dropout], None,
