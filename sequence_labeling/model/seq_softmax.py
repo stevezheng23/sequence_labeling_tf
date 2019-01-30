@@ -53,7 +53,7 @@ class SequenceSoftmax(BaseModel):
             self.transferable_lookup = {v.op.name: v for v in self.transferable_list}
             
             if self.hyperparams.train_ema_enable == True:
-                self.ema = tf.train.ExponentialMovingAverage(decay=self.hyperparams.train_ema_decay_rate)
+                self.ema = self._get_exponential_moving_average(self.global_step)
                 self.variable_lookup = {self.ema.average_name(v): v for v in self.variable_list}
                 self.transferable_lookup = {self.ema.average_name(v): v for v in self.transferable_list}
             
@@ -98,14 +98,14 @@ class SequenceSoftmax(BaseModel):
                 
                 """minimize optimization loss"""
                 self.logger.log_print("# setup loss minimization mechanism")
-                self.update_model, self.clipped_gradients, self.gradient_norm = self._minimize_loss(self.train_loss)
+                self.opt_op, self.clipped_gradients, self.gradient_norm = self._minimize_loss(self.train_loss)
                 
                 if self.hyperparams.train_ema_enable == True:
-                    with tf.control_dependencies([self.update_model]):
+                    with tf.control_dependencies([self.opt_op]):
                         self.update_op = self.ema.apply(self.variable_list)
                         self.variable_lookup = {self.ema.average_name(v): self.ema.average(v) for v in self.variable_list}
                 else:
-                    self.update_op = self.update_model
+                    self.update_op = self.opt_op
                 
                 """create train summary"""
                 self.train_summary = self._get_train_summary()
