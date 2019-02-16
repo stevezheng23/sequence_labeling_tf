@@ -234,18 +234,20 @@ class FusionModule(object):
             if self.fusion_type == "concate":
                 self.fusion_layer_list = []
                 if self.input_unit_dim != self.output_unit_dim:
-                    convert_layer = create_dense_layer("single", 1, self.output_unit_dim, 1, "", [0.0], None, False, False, True,
-                         self.num_gpus, self.default_gpu_id, self.regularizer, self.random_seed, self.trainable)
+                    convert_layer = create_convolution_layer("stacked_1d", 1, self.input_unit_dim,
+                        self.output_unit_dim, 1, 1, "SAME", None, [self.dropout], None, False, False, False,
+                        self.num_gpus, self.default_gpu_id, self.regularizer, self.random_seed, self.trainable)
                     self.fusion_layer_list.append(convert_layer)
             elif self.fusion_type == "dense":
                 fusion_layer = create_dense_layer("single", self.num_layer, self.output_unit_dim, 1,
-                    self.activation, [self.dropout] * self.num_layer, None, False, False, True, self.num_gpus,
+                    self.activation, [self.dropout] * self.num_layer, None, False, False, False, self.num_gpus,
                     self.default_gpu_id, self.regularizer, self.random_seed, self.trainable)
                 self.fusion_layer_list = [fusion_layer]
             elif self.fusion_type == "highway":
                 self.fusion_layer_list = []
                 if self.input_unit_dim != self.output_unit_dim:
-                    convert_layer = create_dense_layer("single", 1, self.output_unit_dim, 1, "", [0.0], None, False, False, True,
+                    convert_layer = create_convolution_layer("stacked_1d", 1, self.input_unit_dim,
+                        self.output_unit_dim, 1, 1, "SAME", None, [self.dropout], None, False, False, False,
                         self.num_gpus, self.default_gpu_id, self.regularizer, self.random_seed, self.trainable)
                     self.fusion_layer_list.append(convert_layer)
                 
@@ -255,7 +257,7 @@ class FusionModule(object):
                 self.fusion_layer_list.append(fusion_layer)
             elif self.fusion_type == "conv":
                 fusion_layer = create_convolution_layer("stacked_1d", self.num_layer, self.input_unit_dim, self.output_unit_dim,
-                    1, 1, "SAME", self.activation, [self.dropout] * self.num_layer, None, False, False, self.num_gpus,
+                    1, 1, "SAME", self.activation, [self.dropout] * self.num_layer, None, False, False, False, self.num_gpus,
                     self.default_gpu_id, self.regularizer, self.random_seed, self.trainable)
                 self.fusion_layer_list = [fusion_layer]
             else:
