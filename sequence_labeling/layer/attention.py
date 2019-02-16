@@ -167,18 +167,6 @@ def _create_trilinear_attention_matrix(src_unit_dim,
     
     return attention_matrix
 
-def _create_projection_matrix(input_unit_dim,
-                              projection_unit_dim,
-                              regularizer,
-                              random_seed,
-                              trainable):
-    """create projection matrix"""
-    weight_initializer = create_variable_initializer("glorot_uniform", random_seed)
-    projection_weight = tf.get_variable("projection_weight", shape=[input_unit_dim, projection_unit_dim],
-        initializer=weight_initializer, regularizer=regularizer, trainable=trainable, dtype=tf.float32)
-    
-    return projection_weight
-
 def _generate_attention_score(input_src_data,
                               input_trg_data,
                               attention_matrix,
@@ -413,18 +401,21 @@ def _generate_attention_mask(input_src_mask,
     
     return input_mask
 
-def _generate_projection_data(input_data,
-                              projection_matrix):
-    """generate projection data"""
-    input_shape = tf.shape(input_data)
-    batch_size = input_shape[0]
-    max_length = input_shape[1]
-    unit_dim = input_shape[2]
-    input_projection = tf.reshape(input_data, shape=[-1, unit_dim])
-    input_projection = tf.matmul(input_projection, projection_matrix)
-    input_projection = tf.reshape(input_projection, shape=[batch_size, max_length, -1])
+def _create_projection_layer(unit_dim,
+                             hidden_activation,
+                             use_bias,
+                             regularizer,
+                             random_seed,
+                             trainable,
+                             name):
+    """create projection layer"""
+    weight_initializer = create_variable_initializer("glorot_uniform", random_seed)
+    bias_initializer = create_variable_initializer("zero")
+    projection_layer = tf.layers.Dense(units=unit_dim, activation=hidden_activation,
+        use_bias=use_bias, kernel_initializer=weight_initializer, bias_initializer=bias_initializer,
+        kernel_regularizer=regularizer, bias_regularizer=regularizer, trainable=trainable, name=name)
     
-    return input_projection
+    return projection_layer
 
 class Attention(object):
     """attention layer"""
@@ -986,15 +977,18 @@ class HeadAttention(object):
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
             if external_matrix == None:
                 (q_att_dim, k_att_dim, v_att_dim) = tuple(self.att_dim)
-                self.projection_matrix = [
-                    _create_projection_matrix(self.src_dim, q_att_dim, self.regularizer, self.random_seed, self.trainable),
-                    _create_projection_matrix(self.trg_dim, k_att_dim, self.regularizer, self.random_seed, self.trainable),
-                    _create_projection_matrix(self.trg_dim, v_att_dim, self.regularizer, self.random_seed, self.trainable)
-                ]
+                self.projection_layer = {
+                    "query": _create_projection_layer(q_att_dim, None, False,
+                        self.regularizer, self.random_seed, self.trainable, "query_projection"),
+                    "key": _create_projection_layer(k_att_dim, None, False,
+                        self.regularizer, self.random_seed, self.trainable, "key_projection"),
+                    "value": _create_projection_layer(v_att_dim, None, False,
+                        self.regularizer, self.random_seed, self.trainable, "value_projection")
+                }
                 self.attention_matrix = _create_attention_matrix(q_att_dim, k_att_dim,
-                    k_att_dim, self.score_type, self.regularizer, self.random_seed, self.trainable)
+                    k_att_dim, self.score_type, self.regularizer, self.random_seed, self.trainable, "att_matrix")
             else:
-                self.projection_matrix = external_matrix["projection"]
+                self.projection_layer = external_matrix["projection"]
                 self.attention_matrix = external_matrix["attention"]
             
             self.dropout_layer = Dropout(rate=self.dropout, num_gpus=num_gpus,
