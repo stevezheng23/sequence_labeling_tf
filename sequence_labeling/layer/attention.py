@@ -1050,9 +1050,9 @@ class HeadAttention(object):
                 input_src_attention, input_src_attention_mask = self.src_norm_layer(input_src_attention, input_src_attention_mask)
                 input_trg_attention, input_trg_attention_mask = self.trg_norm_layer(input_trg_attention, input_trg_attention_mask)
             
-            input_query_attention = _generate_projection_data(input_src_attention, self.projection_matrix[0])
-            input_key_attention = _generate_projection_data(input_trg_attention, self.projection_matrix[1])
-            input_value_attention = _generate_projection_data(input_trg_attention, self.projection_matrix[2])
+            input_query_attention = self.projection_layer["query"](input_src_attention)
+            input_key_attention = self.projection_layer["key"](input_trg_attention)
+            input_value_attention = self.projection_layer["value"](input_trg_attention)
             
             input_attention_score = _generate_attention_score(input_query_attention,
                 input_key_attention, self.attention_matrix, self.score_type)
