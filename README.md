@@ -37,5 +37,12 @@ python sequence_labeling_run.py --mode eval --config config/config_sequence_temp
 # visualize summary via tensorboard
 tensorboard --logdir=output
 ```
+
 ## Experiment
 TODO
+
+## Reference
+* Zhiheng Huang, Wei Xu, and Kai Yu. [Bidirectional LSTM-CRF models for sequence tagging](https://arxiv.org/abs/1508.01991) [2015]
+* Jason PC Chiu and Eric Nichols. [Named entity recognition with bidirectional lstm-cnns](https://arxiv.org/abs/1511.08308) [2015]
+* Xuezhe Ma and Eduard Hovy. [End-to-end Sequence Labeling via Bi-directional LSTM-CNNs CRF](https://arxiv.org/abs/1603.01354) [2016]
+* Guillaume Lample, Miguel Ballesteros, Sandeep Subramanian, KazuyaKawakami, and ChrisDyer. [Neural architectures for named entity recognition](https://arxiv.org/abs/1603.01360) [2016]
