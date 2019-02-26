@@ -39,7 +39,41 @@ tensorboard --logdir=output
 ```
 
 ## Experiment
-TODO
+### Bi-LSTM + Char-CNN + Softmax
+<img src="/sequence_labeling/document/BiLSTM_CharCNN_Softmax.architecture.png" width=600><br />
+*Figure 1: Bi-LSTM + Char-CNN + Softmax architecture*
+
+|   CoNLL2003  |    F1 Score   |   Precision   |     Recall    |
+|:------------:|:-------------:|:-------------:|:-------------:|
+|      Dev     |     94.96     |     95.05     |     94.86     |
+|     Test     |     91.53     |     90.75     |     92.32     |
+
+*Table 1: The performance of Bi-LSTM + Char-CNN + Softmax on CoNLL2003 datasets with setting: num layers = 2, unit dim = 200, window size = [3]*
+
+|  OntoNotes5  |    F1 Score   |   Precision   |     Recall    |
+|:------------:|:-------------:|:-------------:|:-------------:|
+|      Dev     |     85.94     |     84.36     |     87.59     |
+|      Test    |     84.37     |     82.45     |     86.40     |
+
+*Table 2: The performance of Bi-LSTM + Char-CNN + Softmax on OntoNotes5 datasets with setting: num layers = 1, unit dim = 200, window size = [3,5]*
+
+### Bi-LSTM + Char-CNN + CRF
+<img src="/sequence_labeling/document/BiLSTM_CharCNN_CRF.architecture.png" width=600><br />
+*Figure 2: Bi-LSTM + Char-CNN + CRF architecture*
+
+|   CoNLL2003  |    F1 Score   |   Precision   |     Recall    |
+|:------------:|:-------------:|:-------------:|:-------------:|
+|      Dev     |     94.92     |     94.86     |     94.99     |
+|     Test     |     91.41     |     90.44     |     92.39     |
+
+*Table 3: The performance of Bi-LSTM + Char-CNN + CRF on CoNLL2003 datasets with setting: num layers = 2, unit dim = 200, window size = [3]*
+
+|  OntoNotes5  |    F1 Score   |   Precision   |     Recall    |
+|:------------:|:-------------:|:-------------:|:-------------:|
+|      Dev     |     86.09     |     84.37     |     87.89     |
+|     Test     |     84.63     |     82.79     |     86.55     |
+
+*Table 4: The performance of Bi-LSTM + Char-CNN + CRF on OntoNotes5 datasets with setting: num layers = 1, unit dim = 200, window size = [3,5]*
 
 ## Reference
 * Zhiheng Huang, Wei Xu, and Kai Yu. [Bidirectional LSTM-CRF models for sequence tagging](https://arxiv.org/abs/1508.01991) [2015]
