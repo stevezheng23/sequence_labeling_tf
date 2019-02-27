@@ -63,6 +63,7 @@ def create_train_model(logger,
                 word_vocab_size, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
                 char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
                 label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad,
+                hyperparams.train_random_seed, hyperparams.train_enable_shuffle, hyperparams.train_shuffle_buffer_size, 
                 text_placeholder, label_placeholder, data_size_placeholder, batch_size_placeholder)
         else:
             if word_embed_data is not None:
@@ -83,9 +84,9 @@ def create_train_model(logger,
             logger.log_print("# create train data pipeline")
             data_pipeline = create_data_pipeline(input_text_word_dataset, input_text_char_dataset, input_label_dataset,
                 word_vocab_size, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
-                char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
-                label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad, hyperparams.train_enable_shuffle,
-                hyperparams.train_shuffle_buffer_size, len(input_data), hyperparams.train_batch_size, hyperparams.train_random_seed)
+                char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable, label_vocab_index,
+                label_vocab_inverted_index, hyperparams.data_label_pad, hyperparams.train_random_seed, hyperparams.train_enable_shuffle, 
+                hyperparams.train_shuffle_buffer_size, len(input_data), hyperparams.train_batch_size)
         
         model_creator = get_model_creator(hyperparams.model_type)
         model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
@@ -133,7 +134,7 @@ def create_eval_model(logger,
             data_pipeline = create_dynamic_pipeline(input_text_word_dataset, input_text_char_dataset, input_label_dataset,
                 word_vocab_size, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
                 char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
-                label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad,
+                label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad, None, False, 0,
                 text_placeholder, label_placeholder, data_size_placeholder, batch_size_placeholder)
         else:
             if word_embed_data is not None:
@@ -154,9 +155,8 @@ def create_eval_model(logger,
             logger.log_print("# create eval data pipeline")
             data_pipeline = create_data_pipeline(input_text_word_dataset, input_text_char_dataset, input_label_dataset,
                 word_vocab_size, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
-                char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
-                label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad, hyperparams.train_enable_shuffle,
-                hyperparams.train_shuffle_buffer_size, len(input_data), hyperparams.train_eval_batch_size, hyperparams.train_random_seed)
+                char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable, label_vocab_index,
+                label_vocab_inverted_index, hyperparams.data_label_pad, None, False, 0, len(input_data), hyperparams.train_eval_batch_size)
         
         model_creator = get_model_creator(hyperparams.model_type)
         model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,

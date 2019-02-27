@@ -91,6 +91,9 @@ def create_dynamic_pipeline(input_text_word_dataset,
                             label_vocab_index,
                             label_inverted_index,
                             label_pad,
+                            random_seed,
+                            enable_shuffle,
+                            buffer_size,
                             input_text_placeholder,
                             input_label_placeholder,
                             data_size_placeholder,
@@ -112,6 +115,9 @@ def create_dynamic_pipeline(input_text_word_dataset,
         input_text_char_dataset = tf.data.Dataset.from_tensors(default_dataset_tensor).repeat(data_size_placeholder)
         
     dataset = tf.data.Dataset.zip((input_text_word_dataset, input_text_char_dataset, input_label_dataset))
+    
+    if enable_shuffle == True:
+        dataset = dataset.shuffle(buffer_size, random_seed)
     
     dataset = dataset.batch(batch_size=batch_size_placeholder)
     dataset = dataset.prefetch(buffer_size=1)
@@ -158,11 +164,11 @@ def create_data_pipeline(input_text_word_dataset,
                          label_vocab_index,
                          label_inverted_index,
                          label_pad,
+                         random_seed,
                          enable_shuffle,
                          buffer_size,
                          data_size,
-                         batch_size,
-                         random_seed):
+                         batch_size):
     """create data pipeline for sequence labeling model"""
     default_pad_id = tf.constant(0, shape=[], dtype=tf.int32)
     default_dataset_tensor = tf.constant(0, shape=[1,1], dtype=tf.int32)
@@ -182,7 +188,6 @@ def create_data_pipeline(input_text_word_dataset,
     dataset = tf.data.Dataset.zip((input_text_word_dataset, input_text_char_dataset, input_label_dataset))
     
     if enable_shuffle == True:
-        buffer_size = min(buffer_size, data_size)
         dataset = dataset.shuffle(buffer_size, random_seed)
     
     dataset = dataset.batch(batch_size=batch_size)
