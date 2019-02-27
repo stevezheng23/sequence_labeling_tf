@@ -217,10 +217,14 @@ def evaluate(logger,
 
 def export(logger,
            hyperparams,
-           enable_debug=False):
+           enable_debug=False):   
+    config_proto = get_config_proto(hyperparams.device_log_device_placement,
+        hyperparams.device_allow_soft_placement, hyperparams.device_allow_growth,
+        hyperparams.device_per_process_gpu_memory_fraction)
+    
     logger.log_print("##### create online model #####")
     online_model = create_online_model(logger, hyperparams)
-    online_sess = tf.Session()
+    online_sess = tf.Session(config=config_proto)
     if enable_debug == True:
         online_sess = tf_debug.LocalCLIDebugWrapperSession(online_sess)
     
