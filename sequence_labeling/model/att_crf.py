@@ -429,7 +429,7 @@ class AttentionBlock(object):
         self.activation = activation
         self.dropout = dropout
         self.att_dropout = att_dropout
-        self.sublayer_skip, self.num_sublayer, self.layer_dropout = layer_dropout
+        self.sublayer_index, self.num_sublayer, self.layer_dropout = layer_dropout
         self.num_gpus = num_gpus
         self.default_gpu_id = default_gpu_id
         self.regularizer = regularizer
@@ -438,25 +438,14 @@ class AttentionBlock(object):
         self.scope = scope
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
-            if unit_dim % num_head != 0 or unit_dim / num_head == 0:
-                raise ValueError("unit dim {0} and # head {1} mis-match".format(unit_dim, num_head))
-            
-            head_dim = unit_dim / num_head
-            att_dim_list = []
-            for i in range(num_head):
-                att_dim = [head_dim, head_dim, head_dim]
-                att_dim_list.append(att_dim)
-            
-            att_layer_dropout = self.layer_dropout * float(self.sublayer_skip) / self.num_sublayer
-            self.attention_layer = create_attention_layer("multi_head_att", self.unit_dim,
-                self.unit_dim, att_dim_list, "scaled_dot", self.dropout, self.att_dropout, att_layer_dropout, True, True, True,
+            att_layer_dropout = self.layer_dropout * float(self.sublayer_index) / self.num_sublayer
+            self.attention_layer = create_attention_layer("multi_head_att", self.unit_dim, self.unit_dim,
+                self.unit_dim, self.num_head, "scaled_dot", self.dropout, self.att_dropout, att_layer_dropout, True, True, True,
                 None, self.num_gpus, self.default_gpu_id, self.regularizer, self.random_seed, self.trainable)
             
-            dense_layer_dropout = [self.layer_dropout * float(self.sublayer_skip + 1) / self.num_sublayer]
-            self.dense_layer = create_dense_layer("double", 1, self.unit_dim, 4, self.activation, [self.dropout],
+            dense_layer_dropout = [self.layer_dropout * float(self.sublayer_index + 1) / self.num_sublayer]
+            self.dense_layer = create_dense_layer("double", 1, self.unit_dim, 1, self.activation, [self.dropout],
                 dense_layer_dropout, True, True, True, num_gpus, default_gpu_id, self.regularizer, self.random_seed, self.trainable)
-            
-            self.dropout_layer = create_dropout_layer(self.dropout, self.num_gpus, self.default_gpu_id, self.random_seed)
     
     def __call__(self,
                  input_data,
@@ -464,9 +453,7 @@ class AttentionBlock(object):
         """call attention-block layer"""
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
             input_attention, input_attention_mask = self.attention_layer(input_data, input_data, input_mask, input_mask)
-            input_dense, input_dense_mask = self.dense_layer(input_attention, input_attention_mask)
-            
-            output_block, output_block_mask = self.dropout_layer(input_dense, input_dense_mask)
+            output_block, output_block_mask = self.dense_layer(input_attention, input_attention_mask)
         
         return output_block, output_block_mask
 
@@ -506,11 +493,10 @@ class StackedAttentionBlock(object):
             num_sublayer = 2 * self.num_layer
             for i in range(self.num_layer):
                 layer_scope = "layer_{0}".format(i)
-                sublayer_skip = 2 * i
-                layer_default_gpu_id = self.default_gpu_id + i
+                layer_dropout = (2 * i + 1, num_sublayer, self.layer_dropout)
                 block_layer = AttentionBlock(num_head=self.num_head, unit_dim=self.unit_dim, activation=self.activation,
-                    dropout=self.dropout, att_dropout=self.att_dropout, layer_dropout=(sublayer_skip, num_sublayer, self.layer_dropout),
-                    num_gpus=self.num_gpus, default_gpu_id=layer_default_gpu_id, regularizer=self.regularizer,
+                    dropout=self.dropout, att_dropout=self.att_dropout, layer_dropout=layer_dropout,
+                    num_gpus=self.num_gpus, default_gpu_id=self.default_gpu_id, regularizer=self.regularizer,
                     random_seed=self.random_seed, trainable=self.trainable, scope=layer_scope)
                 self.block_layer_list.append(block_layer)
     
