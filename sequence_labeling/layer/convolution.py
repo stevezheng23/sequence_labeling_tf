@@ -78,12 +78,12 @@ class Conv1D(object):
                 input_conv = input_data
                 input_conv_mask = input_mask
             
-            input_conv, input_conv_mask = self.dropout_layer(input_conv, input_conv_mask)
-            
             if self.layer_norm == True:
                 input_conv, input_conv_mask = self.norm_layer(input_conv, input_conv_mask)
             
             input_conv = self.conv_layer(input_conv)
+            
+            input_conv, input_conv_mask = self.dropout_layer(input_conv, input_conv_mask)
             
             if self.residual_connect == True:
                 output_conv, output_mask = tf.cond(tf.random_uniform([]) < self.layer_dropout,
@@ -173,12 +173,12 @@ class Conv3D(object):
                 input_conv = input_data
                 input_conv_mask = input_mask
             
-            input_conv, input_conv_mask = self.dropout_layer(input_conv, input_conv_mask)
-            
             if self.layer_norm == True:
                 input_conv, input_conv_mask = self.norm_layer(input_conv, input_conv_mask)
             
             input_conv = self.conv_layer(input_conv)
+            
+            input_conv, input_conv_mask = self.dropout_layer(input_conv, input_conv_mask)
             
             if self.residual_connect == True:
                 output_conv, output_mask = tf.cond(tf.random_uniform([]) < self.layer_dropout,
@@ -275,8 +275,6 @@ class SeparableConv1D(object):
                 input_conv = input_data
                 input_conv_mask = input_mask
             
-            input_conv, input_conv_mask = self.dropout_layer(input_conv, input_conv_mask)
-            
             if self.layer_norm == True:
                 input_conv, input_conv_mask = self.norm_layer(input_conv, input_conv_mask)
             
@@ -289,6 +287,8 @@ class SeparableConv1D(object):
                 input_conv = input_conv + self.separable_bias
             if self.conv_activation != None:
                 input_conv = self.conv_activation(input_conv)
+            
+            input_conv, input_conv_mask = self.dropout_layer(input_conv, input_conv_mask)
             
             if self.residual_connect == True:
                 output_conv, output_mask = tf.cond(tf.random_uniform([]) < self.layer_dropout,
