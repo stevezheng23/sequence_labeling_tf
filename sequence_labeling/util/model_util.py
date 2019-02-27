@@ -12,7 +12,8 @@ __all__ = ["TrainModel", "EvalModel", "OnlineModel",
            "create_train_model", "create_eval_model", "create_online_model",
            "init_model", "load_model"]
 
-class TrainModel(collections.namedtuple("TrainModel", ("graph", "model", "data_pipeline", "word_embedding"))):
+class TrainModel(collections.namedtuple("TrainModel",
+    ("graph", "model", "data_pipeline", "word_embedding", "input_data", "input_text", "input_label"))):
     pass
 
 class EvalModel(collections.namedtuple("EvalModel",
@@ -39,29 +40,59 @@ def create_train_model(logger,
             hyperparams.model_char_feat_enable, hyperparams.data_label_vocab_file, hyperparams.data_label_vocab_size,
             hyperparams.data_label_unk, hyperparams.data_label_pad)
         
-        logger.log_print("# create train text dataset")
-        text_dataset = tf.data.Dataset.from_tensor_slices(input_text_data)
-        input_text_word_dataset, input_text_char_dataset = create_text_dataset(text_dataset,
-            word_vocab_index, hyperparams.data_text_word_size, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
-            char_vocab_index, hyperparams.data_text_char_size, hyperparams.data_char_pad, hyperparams.model_char_feat_enable)
-        
-        logger.log_print("# create train label dataset")
-        label_dataset = tf.data.Dataset.from_tensor_slices(input_label_data)
-        input_label_dataset = create_label_dataset(label_dataset,
-            label_vocab_index, hyperparams.data_label_size, hyperparams.data_label_pad)
-        
-        logger.log_print("# create train data pipeline")
-        data_pipeline = create_data_pipeline(input_text_word_dataset, input_text_char_dataset, input_label_dataset,
-            word_vocab_size, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
-            char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
-            label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad, hyperparams.train_enable_shuffle,
-            hyperparams.train_shuffle_buffer_size, len(input_data), hyperparams.train_batch_size, hyperparams.train_random_seed)
+        external_data = {}
+        if hyperparams.data_pipeline_mode == "dynamic":
+            logger.log_print("# create train text dataset")
+            text_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
+            text_dataset = tf.data.Dataset.from_tensor_slices(text_placeholder)
+            input_text_word_dataset, input_text_char_dataset = create_text_dataset(text_dataset,
+                word_vocab_index, hyperparams.data_text_word_size, hyperparams.data_word_pad,
+                hyperparams.model_word_feat_enable, char_vocab_index, hyperparams.data_text_char_size,
+                hyperparams.data_char_pad, hyperparams.model_char_feat_enable, hyperparams.data_num_parallel)
+
+            logger.log_print("# create train label dataset")
+            label_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
+            label_dataset = tf.data.Dataset.from_tensor_slices(label_placeholder)
+            input_label_dataset = create_label_dataset(label_dataset, label_vocab_index,
+                hyperparams.data_label_size, hyperparams.data_label_pad, hyperparams.data_num_parallel)
+
+            logger.log_print("# create train data pipeline")
+            data_size_placeholder = tf.placeholder(shape=[], dtype=tf.int64)
+            batch_size_placeholder = tf.placeholder(shape=[], dtype=tf.int64)
+            data_pipeline = create_dynamic_pipeline(input_text_word_dataset, input_text_char_dataset, input_label_dataset,
+                word_vocab_size, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
+                char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
+                label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad,
+                text_placeholder, label_placeholder, data_size_placeholder, batch_size_placeholder)
+        else:
+            if word_embed_data is not None:
+                external_data["word_embedding"] = word_embed_data
+
+            logger.log_print("# create train text dataset")
+            text_dataset = tf.data.Dataset.from_tensor_slices(input_text_data)
+            input_text_word_dataset, input_text_char_dataset = create_text_dataset(text_dataset,
+                word_vocab_index, hyperparams.data_text_word_size, hyperparams.data_word_pad,
+                hyperparams.model_word_feat_enable, char_vocab_index, hyperparams.data_text_char_size,
+                hyperparams.data_char_pad, hyperparams.model_char_feat_enable, hyperparams.data_num_parallel)
+
+            logger.log_print("# create train label dataset")
+            label_dataset = tf.data.Dataset.from_tensor_slices(input_label_data)
+            input_label_dataset = create_label_dataset(label_dataset, label_vocab_index,
+                hyperparams.data_label_size, hyperparams.data_label_pad, hyperparams.data_num_parallel)
+
+            logger.log_print("# create train data pipeline")
+            data_pipeline = create_data_pipeline(input_text_word_dataset, input_text_char_dataset, input_label_dataset,
+                word_vocab_size, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
+                char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
+                label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad, hyperparams.train_enable_shuffle,
+                hyperparams.train_shuffle_buffer_size, len(input_data), hyperparams.train_batch_size, hyperparams.train_random_seed)
         
         model_creator = get_model_creator(hyperparams.model_type)
         model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
-            mode="train", scope=hyperparams.model_scope)
+            external_data=external_data, mode="train", scope=hyperparams.model_scope)
         
-        return TrainModel(graph=graph, model=model, data_pipeline=data_pipeline, word_embedding=word_embed_data)
+        return TrainModel(graph=graph, model=model, data_pipeline=data_pipeline,
+            word_embedding=word_embed_data, input_data=input_data, input_text=input_text_data, input_label=input_label_data)
 
 def create_eval_model(logger,
                       hyperparams):
@@ -80,31 +111,56 @@ def create_eval_model(logger,
             hyperparams.model_char_feat_enable, hyperparams.data_label_vocab_file, hyperparams.data_label_vocab_size,
             hyperparams.data_label_unk, hyperparams.data_label_pad)
         
-        logger.log_print("# create eval text dataset")
-        text_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
-        text_dataset = tf.data.Dataset.from_tensor_slices(text_placeholder)
-        input_text_word_dataset, input_text_char_dataset = create_text_dataset(text_dataset,
-            word_vocab_index, hyperparams.data_text_word_size, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
-            char_vocab_index, hyperparams.data_text_char_size, hyperparams.data_char_pad, hyperparams.model_char_feat_enable)
-        
-        logger.log_print("# create eval label dataset")
-        label_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
-        label_dataset = tf.data.Dataset.from_tensor_slices(label_placeholder)
-        input_label_dataset = create_label_dataset(label_dataset,
-            label_vocab_index, hyperparams.data_label_size, hyperparams.data_label_pad)
-        
-        logger.log_print("# create eval data pipeline")
-        data_size_placeholder = tf.placeholder(shape=[], dtype=tf.int64)
-        batch_size_placeholder = tf.placeholder(shape=[], dtype=tf.int64)
-        data_pipeline = create_dynamic_pipeline(input_text_word_dataset, input_text_char_dataset, input_label_dataset,
-            word_vocab_size, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
-            char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
-            label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad,
-            text_placeholder, label_placeholder, data_size_placeholder, batch_size_placeholder)
+        external_data = {}
+        if hyperparams.data_pipeline_mode == "dynamic":
+            logger.log_print("# create eval text dataset")
+            text_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
+            text_dataset = tf.data.Dataset.from_tensor_slices(text_placeholder)
+            input_text_word_dataset, input_text_char_dataset = create_text_dataset(text_dataset,
+                word_vocab_index, hyperparams.data_text_word_size, hyperparams.data_word_pad,
+                hyperparams.model_word_feat_enable, char_vocab_index, hyperparams.data_text_char_size,
+                hyperparams.data_char_pad, hyperparams.model_char_feat_enable, hyperparams.data_num_parallel)
+
+            logger.log_print("# create eval label dataset")
+            label_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
+            label_dataset = tf.data.Dataset.from_tensor_slices(label_placeholder)
+            input_label_dataset = create_label_dataset(label_dataset, label_vocab_index,
+                hyperparams.data_label_size, hyperparams.data_label_pad, hyperparams.data_num_parallel)
+
+            logger.log_print("# create eval data pipeline")
+            data_size_placeholder = tf.placeholder(shape=[], dtype=tf.int64)
+            batch_size_placeholder = tf.placeholder(shape=[], dtype=tf.int64)
+            data_pipeline = create_dynamic_pipeline(input_text_word_dataset, input_text_char_dataset, input_label_dataset,
+                word_vocab_size, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
+                char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
+                label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad,
+                text_placeholder, label_placeholder, data_size_placeholder, batch_size_placeholder)
+        else:
+            if word_embed_data is not None:
+                external_data["word_embedding"] = word_embed_data
+
+            logger.log_print("# create eval text dataset")
+            text_dataset = tf.data.Dataset.from_tensor_slices(input_text_data)
+            input_text_word_dataset, input_text_char_dataset = create_text_dataset(text_dataset,
+                word_vocab_index, hyperparams.data_text_word_size, hyperparams.data_word_pad,
+                hyperparams.model_word_feat_enable, char_vocab_index, hyperparams.data_text_char_size,
+                hyperparams.data_char_pad, hyperparams.model_char_feat_enable, hyperparams.data_num_parallel)
+
+            logger.log_print("# create eval label dataset")
+            label_dataset = tf.data.Dataset.from_tensor_slices(input_label_data)
+            input_label_dataset = create_label_dataset(label_dataset, label_vocab_index,
+                hyperparams.data_label_size, hyperparams.data_label_pad, hyperparams.data_num_parallel)
+
+            logger.log_print("# create eval data pipeline")
+            data_pipeline = create_data_pipeline(input_text_word_dataset, input_text_char_dataset, input_label_dataset,
+                word_vocab_size, word_vocab_index, hyperparams.data_word_pad, hyperparams.model_word_feat_enable,
+                char_vocab_size, char_vocab_index, hyperparams.data_char_pad, hyperparams.model_char_feat_enable,
+                label_vocab_index, label_vocab_inverted_index, hyperparams.data_label_pad, hyperparams.train_enable_shuffle,
+                hyperparams.train_shuffle_buffer_size, len(input_data), hyperparams.train_eval_batch_size, hyperparams.train_random_seed)
         
         model_creator = get_model_creator(hyperparams.model_type)
         model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
-            mode="eval", scope=hyperparams.model_scope)
+            external_data=external_data, mode="eval", scope=hyperparams.model_scope)
         
         return EvalModel(graph=graph, model=model, data_pipeline=data_pipeline,
             word_embedding=word_embed_data, input_data=input_data, input_text=input_text_data, input_label=input_label_data)
@@ -132,7 +188,7 @@ def create_online_model(logger,
 
     model_creator = get_model_creator(hyperparams.model_type)
     model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
-        mode="online", scope=hyperparams.model_scope)
+        external_data={}, mode="online", scope=hyperparams.model_scope)
 
     return OnlineModel(model=model, data_pipeline=data_pipeline)
 

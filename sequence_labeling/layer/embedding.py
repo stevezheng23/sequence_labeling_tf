@@ -49,6 +49,7 @@ class PretrainedEmbedding(object):
     def __init__(self,
                  vocab_size,
                  embed_dim,
+                 embedding,
                  num_gpus=1,
                  default_gpu_id=0,
                  regularizer=None,
@@ -58,6 +59,7 @@ class PretrainedEmbedding(object):
         """initialize pretrained embedding layer"""
         self.vocab_size = vocab_size
         self.embed_dim = embed_dim
+        self.embedding = embedding
         self.regularizer = regularizer if trainable == True else None
         self.feedable = feedable
         self.trainable = trainable
@@ -65,9 +67,14 @@ class PretrainedEmbedding(object):
         self.device_spec = get_device_spec(default_gpu_id, num_gpus)
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE), tf.device(self.device_spec):
-            initializer = create_variable_initializer("zero")
-            embedding = tf.get_variable("pretrained_embedding", shape=[self.vocab_size, self.embed_dim],
-                initializer=initializer, regularizer=self.regularizer, trainable=self.trainable, dtype=tf.float32)
+            if self.embedding is not None:
+                initializer = tf.constant_initializer(self.embedding)
+                embedding = tf.get_variable("pretrained_embedding", shape=[self.vocab_size, self.embed_dim],
+                    initializer=initializer, regularizer=self.regularizer, trainable=self.trainable, dtype=tf.float32)
+            else:
+                initializer = create_variable_initializer("zero")
+                embedding = tf.get_variable("pretrained_embedding", shape=[self.vocab_size, self.embed_dim],
+                    initializer=initializer, regularizer=self.regularizer, trainable=self.trainable, dtype=tf.float32)
             
             if self.feedable == True:
                 self.embedding_placeholder = tf.placeholder(name="embedding_placeholder",

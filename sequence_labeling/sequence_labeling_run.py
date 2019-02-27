@@ -20,32 +20,49 @@ def add_arguments(parser):
     parser.add_argument("--mode", help="mode to run", required=True)
     parser.add_argument("--config", help="path to json config", required=True)
 
+def pipeline_initialize(sess,
+                        model,
+                        pipeline_mode,
+                        batch_size):
+    data_size = len(model.input_data)
+    data_dict = {
+        "data_size": data_size,
+        "input_data": model.input_data,
+        "input_text": model.input_text,
+        "input_label": model.input_label
+    }
+    
+    if pipeline_mode == "dynamic":
+        sess.run(model.data_pipeline.initializer,
+            feed_dict={model.data_pipeline.input_text_placeholder: model.input_text,
+                model.data_pipeline.input_label_placeholder: model.input_label,
+                model.data_pipeline.data_size_placeholder: data_size,
+                model.data_pipeline.batch_size_placeholder: batch_size})
+    else:
+        sess.run(model.data_pipeline.initializer)
+    
+    return data_dict
+
 def extrinsic_eval(logger,
                    summary_writer,
                    sess,
                    model,
-                   input_data,
-                   text_data,
-                   label_data,
-                   word_embedding,
+                   pipeline_mode,
                    batch_size,
                    metric_list,
                    global_step,
                    epoch,
                    ckpt_file,
                    eval_mode):
-    data_size = len(input_data)
     load_model(sess, model, ckpt_file, eval_mode)
-    sess.run(model.data_pipeline.initializer,
-        feed_dict={model.data_pipeline.input_text_placeholder: text_data,
-            model.data_pipeline.input_label_placeholder: label_data,
-            model.data_pipeline.data_size_placeholder: data_size,
-            model.data_pipeline.batch_size_placeholder: batch_size})
+    data_dict = pipeline_initialize(sess, model, pipeline_mode, batch_size)
     
+    data_size = data_dict["data_size"]
+    input_data = data_dict["input_data"]
     predict_data = []
     while True:
         try:
-            infer_result = model.model.infer(sess, word_embedding)
+            infer_result = model.model.infer(sess, model.word_embedding)
             predict_data.extend(infer_result.predict)
         except  tf.errors.OutOfRangeError:
             break
@@ -125,7 +142,9 @@ def train(logger,
     logger.log_print("##### start training #####")
     global_step = 0
     for epoch in range(hyperparams.train_num_epoch):
-        train_sess.run(train_model.data_pipeline.initializer)
+        data_dict = pipeline_initialize(train_sess, train_model,
+            hyperparams.data_pipeline_mode, hyperparams.train_batch_size)
+        
         step_in_epoch = 0
         while True:
             try:
@@ -145,8 +164,7 @@ def train(logger,
                 if step_in_epoch % hyperparams.train_step_per_eval == 0 and enable_eval == True:
                     ckpt_file = eval_model.model.get_latest_ckpt("debug")
                     extrinsic_eval(eval_logger, eval_summary_writer, eval_sess, eval_model,
-                        eval_model.input_data, eval_model.input_text, eval_model.input_label,
-                        eval_model.word_embedding, hyperparams.train_eval_batch_size,
+                        hyperparams.data_pipeline_mode, hyperparams.train_eval_batch_size,
                         hyperparams.train_eval_metric, global_step, epoch, ckpt_file, "debug")
             except tf.errors.OutOfRangeError:
                 train_logger.check()
@@ -155,8 +173,7 @@ def train(logger,
                 if enable_eval == True:
                     ckpt_file = eval_model.model.get_latest_ckpt("epoch")
                     extrinsic_eval(eval_logger, eval_summary_writer, eval_sess, eval_model,
-                        eval_model.input_data, eval_model.input_text, eval_model.input_label,
-                        eval_model.word_embedding, hyperparams.train_eval_batch_size,
+                        hyperparams.data_pipeline_mode, hyperparams.train_eval_batch_size,
                         hyperparams.train_eval_metric, global_step, epoch, ckpt_file, "epoch")
                 break
 
@@ -192,8 +209,7 @@ def evaluate(logger,
     ckpt_file_list = eval_model.model.get_ckpt_list(eval_mode)
     for i, ckpt_file in enumerate(ckpt_file_list):
         extrinsic_eval(eval_logger, eval_summary_writer, eval_sess, eval_model,
-            eval_model.input_data, eval_model.input_text, eval_model.input_label,
-            eval_model.word_embedding, hyperparams.train_eval_batch_size,
+            hyperparams.data_pipeline_mode, hyperparams.train_eval_batch_size,
             hyperparams.train_eval_metric, i, i, ckpt_file, eval_mode)
     
     eval_summary_writer.close_writer()
