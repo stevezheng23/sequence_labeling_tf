@@ -224,27 +224,29 @@ def create_text_dataset(input_data_set,
                         char_vocab_index,
                         char_max_size,
                         char_pad,
-                        char_feat_enable):
+                        char_feat_enable,
+                        num_parallel):
     """create word/char-level dataset for input data"""
     word_dataset = None
     if word_feat_enable == True:
         word_dataset = input_data_set.map(lambda sent: generate_word_feat(sent,
-            word_vocab_index, word_max_size, word_pad))
+            word_vocab_index, word_max_size, word_pad), num_parallel_calls=num_parallel)
     
     char_dataset = None
     if char_feat_enable == True:
         char_dataset = input_data_set.map(lambda sent: generate_char_feat(sent,
-            word_max_size, char_vocab_index, char_max_size, char_pad))
+            word_max_size, char_vocab_index, char_max_size, char_pad), num_parallel_calls=num_parallel)
     
     return word_dataset, char_dataset
 
 def create_label_dataset(input_data_set,
                          label_vocab_index,
                          label_max_size,
-                         label_pad):
+                         label_pad,
+                         num_parallel):
     """create label dataset for input data"""
     label_dataset = input_data_set.map(lambda sent: generate_label_feat(sent,
-        label_vocab_index, label_max_size, label_pad))
+        label_vocab_index, label_max_size, label_pad), num_parallel_calls=num_parallel)
     
     return label_dataset
 
