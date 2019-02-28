@@ -11,7 +11,7 @@ TRANSFERABLE_VARIABLES = "transferable_variables"
 
 def check_tensorflow_version():
     """check tensorflow version in current environment"""
-    min_tf_version = "1.10.0"
+    min_tf_version = "1.12.0"
     curr_tf_version = tf.__version__
     if curr_tf_version < min_tf_version:
         raise EnvironmentError("tensorflow version must be >= {0}".format(min_tf_version))
