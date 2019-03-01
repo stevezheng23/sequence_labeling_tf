@@ -37,6 +37,16 @@ python sequence_labeling_run.py --mode eval --config config/config_sequence_temp
 # visualize summary via tensorboard
 tensorboard --logdir=output
 ```
+* Export model
+```bash
+# export frozen model
+python sequence_labeling_run.py --mode export --config config/config_sequence_template.xxx.json
+```
+* Setup service
+```bash
+# setup tensorflow serving
+docker run -p 8500:8500 -v output/xxx/model:models/ner -e MODEL_NAME=ner -t tensorflow/serving
+```
 
 ## Experiment
 ### Bi-LSTM + Char-CNN + Softmax
@@ -45,17 +55,17 @@ tensorboard --logdir=output
 
 |   CoNLL2003  |    F1 Score   |   Precision   |     Recall    |
 |:------------:|:-------------:|:-------------:|:-------------:|
-|      Dev     |     94.96     |     95.05     |     94.86     |
-|     Test     |     91.53     |     90.75     |     92.32     |
+|      Dev     |     94.86     |     94.94     |     94.79     |
+|     Test     |     91.66     |     91.02     |     92.32     |
 
 *Table 1: The performance of Bi-LSTM + Char-CNN + Softmax on CoNLL2003 datasets with setting: num layers = 2, unit dim = 200, window size = [3]*
 
 |  OntoNotes5  |    F1 Score   |   Precision   |     Recall    |
 |:------------:|:-------------:|:-------------:|:-------------:|
-|      Dev     |     85.94     |     84.36     |     87.59     |
-|      Test    |     84.37     |     82.45     |     86.40     |
+|      Dev     |     86.01     |     83.92     |     88.19     |
+|      Test    |     84.80     |     82.30     |     87.46     |
 
-*Table 2: The performance of Bi-LSTM + Char-CNN + Softmax on OntoNotes5 datasets with setting: num layers = 1, unit dim = 200, window size = [3,5]*
+*Table 2: The performance of Bi-LSTM + Char-CNN + Softmax on OntoNotes5 datasets with setting: num layers = 2, unit dim = 200, window size = [3,5]*
 
 ### Bi-LSTM + Char-CNN + CRF
 <img src="/sequence_labeling/document/BiLSTM_CharCNN_CRF.architecture.png" width=600><br />
@@ -63,17 +73,17 @@ tensorboard --logdir=output
 
 |   CoNLL2003  |    F1 Score   |   Precision   |     Recall    |
 |:------------:|:-------------:|:-------------:|:-------------:|
-|      Dev     |     94.92     |     94.86     |     94.99     |
-|     Test     |     91.41     |     90.44     |     92.39     |
+|      Dev     |     94.61     |     94.67     |     94.55     |
+|     Test     |     91.19     |     90.39     |     92.00     |
 
 *Table 3: The performance of Bi-LSTM + Char-CNN + CRF on CoNLL2003 datasets with setting: num layers = 2, unit dim = 200, window size = [3]*
 
 |  OntoNotes5  |    F1 Score   |   Precision   |     Recall    |
 |:------------:|:-------------:|:-------------:|:-------------:|
-|      Dev     |     86.09     |     84.37     |     87.89     |
-|     Test     |     84.63     |     82.79     |     86.55     |
+|      Dev     |     86.21     |     83.88     |     88.67     |
+|     Test     |     85.12     |     82.49     |     87.92     |
 
-*Table 4: The performance of Bi-LSTM + Char-CNN + CRF on OntoNotes5 datasets with setting: num layers = 1, unit dim = 200, window size = [3,5]*
+*Table 4: The performance of Bi-LSTM + Char-CNN + CRF on OntoNotes5 datasets with setting: num layers = 2, unit dim = 200, window size = [3,5]*
 
 ## Reference
 * Zhiheng Huang, Wei Xu, and Kai Yu. [Bidirectional LSTM-CRF models for sequence tagging](https://arxiv.org/abs/1508.01991) [2015]
