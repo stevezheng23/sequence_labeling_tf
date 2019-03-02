@@ -496,12 +496,12 @@ class CharFeat(object):
                 self.num_gpus, self.default_gpu_id, None, self.random_seed, False, self.trainable)
             
             self.conv_layer = create_convolution_layer("stacked_multi_1d", 1, self.embed_dim,
-                self.unit_dim, self.window_size, 1, "SAME", self.activation, [self.dropout], None,
+                self.unit_dim, self.window_size, 1, "SAME", self.activation, [0.0], None,
                 False, False, True, self.num_gpus, self.default_gpu_id, self.regularizer, self.random_seed, self.trainable)
             
             self.dropout_layer = create_dropout_layer(self.dropout, self.num_gpus, self.default_gpu_id, self.random_seed)
             
-            self.pooling_layer = create_pooling_layer(self.pooling_type, 1, 1, self.num_gpus, self.default_gpu_id)
+            self.pooling_layer = create_pooling_layer(self.pooling_type, -1, 1, self.num_gpus, self.default_gpu_id)
     
     def __call__(self,
                  input_char,
