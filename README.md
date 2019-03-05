@@ -32,15 +32,20 @@ python sequence_labeling_run.py --mode train --config config/config_sequence_tem
 # run experiment in eval only mode
 python sequence_labeling_run.py --mode eval --config config/config_sequence_template.xxx.json
 ```
-* Visualize summary
-```bash
-# visualize summary via tensorboard
-tensorboard --logdir=output
-```
 * Export model
 ```bash
 # export frozen model
 python sequence_labeling_run.py --mode export --config config/config_sequence_template.xxx.json
+```
+* Search hyper-parameter
+```bash
+# random search hyper-parameters
+python hparam_search.py --base-config config/config_sequence_template.xxx.json --search-config config/config_search_template.xxx.json --num-group 10 --random-seed 100 --output-dir config/search
+```
+* Visualize summary
+```bash
+# visualize summary via tensorboard
+tensorboard --logdir=output
 ```
 * Setup service
 ```bash
