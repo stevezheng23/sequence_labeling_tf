@@ -405,13 +405,15 @@ def process_vocab_table(vocab,
         vocab = { k: vocab[k] for k in vocab.keys() if k in vocab_lookup }
     
     sorted_vocab = sorted(vocab, key=vocab.get, reverse=True)
-    vocab_table = [unk] + sorted_vocab[:vocab_size-2] + [pad]
+    vocab_table = [unk] + sorted_vocab[:vocab_size-2] + [pad] if unk else sorted_vocab[:vocab_size-1] + [pad]
+    
     vocab_size = len(vocab_table)
+    default_vocab = vocab_table[0]
     
     vocab_index = tf.contrib.lookup.index_table_from_tensor(
         mapping=tf.constant(vocab_table), default_value=0)
     vocab_inverted_index = tf.contrib.lookup.index_to_string_table_from_tensor(
-        mapping=tf.constant(vocab_table), default_value=unk)
+        mapping=tf.constant(vocab_table), default_value=default_vocab)
     
     return vocab_table, vocab_size, vocab_index, vocab_inverted_index
 
