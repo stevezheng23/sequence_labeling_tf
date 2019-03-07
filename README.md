@@ -11,6 +11,7 @@ Sequence labeling is a task that assigns categorial label to each element in an 
 ## DataSet
 * [CoNLL2003](https://www.clips.uantwerpen.be/conll2003/ner/) is a multi-task dataset, which contains 3 sub-tasks, POS tagging, syntactic chunking and NER. For NER sub-task, it contains 4 types of named entities: persons, locations, organizations and names of miscellaneous entities that do not belong to the previous three groups.
 * [OntoNotes5](https://catalog.ldc.upenn.edu/LDC2013T19) is a multi-task dataset, which contains several sub-tasks, including POS tagging, word sense disambiguation, coreference, NER and others. For NER sub-task, it contains 18 types of named entities: PERSON, LOC, ORG, DATE, MONEY and others. This dataset can be converted into CoNLL format using [common tool](http://conll.cemantix.org/2012/data.html).
+* [Treebank3](https://catalog.ldc.upenn.edu/LDC99T42) is a distributed release of Penn Treebank (PTB) project, which selected 2,499 stories from a three year Wall Street Journal (WSJ) collection of 98,732 stories for syntactic annotation, including POS tagging and constituency parsing.
 * [GloVe](https://nlp.stanford.edu/projects/glove/) is an unsupervised learning algorithm for obtaining vector representations for words. Training is performed on aggregated global word-word co-occurrence statistics from a corpus, and the resulting representations showcase interesting linear substructures of the word vector space.
 
 ## Usage
@@ -55,40 +56,54 @@ docker run -p 8500:8500 -v output/xxx/model:models/ner -e MODEL_NAME=ner -t tens
 
 ## Experiment
 ### Bi-LSTM + Char-CNN + Softmax
-<img src="/sequence_labeling/document/BiLSTM_CharCNN_Softmax.architecture.png" width=600><br />
+<img src="/sequence_labeling/document/BiLSTM_CharCNN_Softmax.architecture.png" width=500><br />
 *Figure 1: Bi-LSTM + Char-CNN + Softmax architecture*
 
 |    CoNLL2003 - NER  |    F1 Score   |   Precision   |     Recall    |
 |:-------------------:|:-------------:|:-------------:|:-------------:|
-|         Dev         |     94.86     |     94.94     |     94.79     |
-|        Test         |     91.66     |     91.02     |     92.32     |
+|         Dev         |     94.92     |     94.97     |     94.87     |
+|        Test         |     91.29     |     90.41     |     92.18     |
 
 *Table 1: The performance of Bi-LSTM + Char-CNN + Softmax on CoNLL2003 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3]*
 
 |   OntoNotes5 - NER  |    F1 Score   |   Precision   |     Recall    |
 |:-------------------:|:-------------:|:-------------:|:-------------:|
-|         Dev         |     86.01     |     83.92     |     88.19     |
-|        Test         |     84.80     |     82.30     |     87.46     |
+|         Dev         |     86.22     |     84.21     |     88.32     |
+|        Test         |     85.09     |     82.66     |     87.67     |
 
 *Table 2: The performance of Bi-LSTM + Char-CNN + Softmax on OntoNotes5 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3,5]*
 
+|   Treebank3 - POS   |    Accuracy   |
+|:-------------------:|:-------------:|
+|         Dev         |     97.36     |
+|        Test         |     97.58     |
+
+*Table 3: The performance of Bi-LSTM + Char-CNN + Softmax on Treebank3 POS tagging sub-task with setting: num layers = 2, unit dim = 200, window size = [3]*
+
 ### Bi-LSTM + Char-CNN + CRF
-<img src="/sequence_labeling/document/BiLSTM_CharCNN_CRF.architecture.png" width=600><br />
+<img src="/sequence_labeling/document/BiLSTM_CharCNN_CRF.architecture.png" width=500><br />
 *Figure 2: Bi-LSTM + Char-CNN + CRF architecture*
 
 |    CoNLL2003 - NER  |    F1 Score   |   Precision   |     Recall    |
 |:-------------------:|:-------------:|:-------------:|:-------------:|
-|         Dev         |     94.61     |     94.67     |     94.55     |
-|        Test         |     91.19     |     90.39     |     92.00     |
+|         Dev         |     94.93     |     94.92     |     94.93     |
+|        Test         |     91.30     |     90.47     |     92.15     |
 
-*Table 3: The performance of Bi-LSTM + Char-CNN + CRF on CoNLL2003 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3]*
+*Table 4: The performance of Bi-LSTM + Char-CNN + CRF on CoNLL2003 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3]*
 
 |   OntoNotes5 - NER  |    F1 Score   |   Precision   |     Recall    |
 |:-------------------:|:-------------:|:-------------:|:-------------:|
-|         Dev         |     86.21     |     83.88     |     88.67     |
-|        Test         |     85.12     |     82.49     |     87.92     |
+|         Dev         |     86.45     |     84.11     |     88.93     |
+|        Test         |     85.25     |     82.57     |     88.11     |
 
-*Table 4: The performance of Bi-LSTM + Char-CNN + CRF on OntoNotes5 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3,5]*
+*Table 5: The performance of Bi-LSTM + Char-CNN + CRF on OntoNotes5 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3,5]*
+
+|   Treebank3 - POS   |    Accuracy   |
+|:-------------------:|:-------------:|
+|         Dev         |     97.27     |
+|        Test         |     97.51     |
+
+*Table 6: The performance of Bi-LSTM + Char-CNN + CRF on Treebank3 POS tagging sub-task with setting: num layers = 2, unit dim = 200, window size = [3]*
 
 ## Reference
 * Zhiheng Huang, Wei Xu, and Kai Yu. [Bidirectional LSTM-CRF models for sequence tagging](https://arxiv.org/abs/1508.01991) [2015]
