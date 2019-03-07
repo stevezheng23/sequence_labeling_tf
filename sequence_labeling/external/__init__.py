@@ -1,1 +1,1 @@
-__all__ = ["precision_recall"]
+__all__ = ["accuracy", "precision_recall"]
