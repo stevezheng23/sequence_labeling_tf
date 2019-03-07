@@ -1,10 +1,10 @@
 import numpy as np
 
-__all__ = ["get_precision_recall"]
+__all__ = ["get_accuracy"]
 
-def get_precision_recall(predict_data,
-                         label_data,
-                         invalid_labels):
+def get_accuracy(predict_data,
+                 label_data,
+                 invalid_labels):
     if len(predict_data) != len(label_data):
         raise ValueError('# predict and # label must be the same')
     
@@ -19,22 +19,17 @@ def get_precision_recall(predict_data,
         
         sample_items.extend(list(zip(predict_items, label_items)))
     
-    label_lookup = set(invalid_labels) if invalid_labels is not None else { "O", "P" }
-    tp, tp_tn, tp_fn = 0, 0, 0
+    label_lookup = set(invalid_labels) if invalid_labels is not None else { "P" }
+    correct, total = 0, 0
     for predict_item, label_item in sample_items:
-        if predict_item not in label_lookup:
-            tp_tn += 1
-        
-        if label_item not in label_lookup:
-            tp_fn += 1
-        
         if predict_item in label_lookup or label_item in label_lookup:
             continue
         
         if predict_item == label_item:
-            tp += 1
+            correct += 1
+        
+        total += 1
             
-    precision = 0.0 if tp_tn == 0 else float(tp) / float(tp_tn)
-    recall = 0.0 if tp_fn == 0 else float(tp) / float(tp_fn)
+    accuracy = 0.0 if total == 0 else float(correct) / float(total)
     
-    return precision, recall
+    return accuracy

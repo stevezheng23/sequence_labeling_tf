@@ -50,6 +50,7 @@ def extrinsic_eval(logger,
                    pipeline_mode,
                    batch_size,
                    metric_list,
+                   invalid_labels,
                    global_step,
                    epoch,
                    ckpt_file,
@@ -87,7 +88,7 @@ def extrinsic_eval(logger,
     
     eval_result_list = []
     for metric in metric_list:
-        score = evaluate_from_data(predict_output, label_output, metric)
+        score = evaluate_from_data(predict_output, label_output, metric, invalid_labels)
         summary_writer.add_value_summary(metric, score, global_step)
         eval_result = ExtrinsicEvalLog(metric=metric,
             score=score, sample_output=None, sample_size=len(sample_output))
@@ -141,6 +142,7 @@ def train(logger,
     
     logger.log_print("##### start training #####")
     global_step = 0
+    invalid_labels = [ hyperparams.data_label_unk, hyperparams.data_label_pad ]
     for epoch in range(hyperparams.train_num_epoch):
         data_dict = pipeline_initialize(train_sess, train_model,
             hyperparams.data_pipeline_mode, hyperparams.train_batch_size)
@@ -165,7 +167,7 @@ def train(logger,
                     ckpt_file = eval_model.model.get_latest_ckpt("debug")
                     extrinsic_eval(eval_logger, eval_summary_writer, eval_sess, eval_model,
                         hyperparams.data_pipeline_mode, hyperparams.train_eval_batch_size,
-                        hyperparams.train_eval_metric, global_step, epoch, ckpt_file, "debug")
+                        hyperparams.train_eval_metric, invalid_labels, global_step, epoch, ckpt_file, "debug")
             except tf.errors.OutOfRangeError:
                 train_logger.check()
                 train_summary_writer.add_summary(train_result.summary, global_step)
@@ -174,7 +176,7 @@ def train(logger,
                     ckpt_file = eval_model.model.get_latest_ckpt("epoch")
                     extrinsic_eval(eval_logger, eval_summary_writer, eval_sess, eval_model,
                         hyperparams.data_pipeline_mode, hyperparams.train_eval_batch_size,
-                        hyperparams.train_eval_metric, global_step, epoch, ckpt_file, "epoch")
+                        hyperparams.train_eval_metric, invalid_labels, global_step, epoch, ckpt_file, "epoch")
                 break
 
     train_summary_writer.close_writer()
@@ -206,11 +208,12 @@ def evaluate(logger,
     
     logger.log_print("##### start evaluation #####")
     eval_mode = "epoch"
+    invalid_labels = [ hyperparams.data_label_unk, hyperparams.data_label_pad ]
     ckpt_file_list = eval_model.model.get_ckpt_list(eval_mode)
     for i, ckpt_file in enumerate(ckpt_file_list):
         extrinsic_eval(eval_logger, eval_summary_writer, eval_sess, eval_model,
             hyperparams.data_pipeline_mode, hyperparams.train_eval_batch_size,
-            hyperparams.train_eval_metric, i, i, ckpt_file, eval_mode)
+            hyperparams.train_eval_metric, invalid_labels, i, i, ckpt_file, eval_mode)
     
     eval_summary_writer.close_writer()
     logger.log_print("##### finish evaluation #####")
