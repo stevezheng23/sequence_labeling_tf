@@ -1,7 +1,7 @@
 # Sequence Labeling
 Sequence labeling is a task that assigns categorial label to each element in an input sequence. Many problems can be formalized as sequence labeling task, including speech recognition, video analysis and various problems in NLP (e.g. POS tagging, NER, Chunking, etc.). Traditionally sequence labeling requires large amount of hand-engineered features and domain-specific knowledge, but recently neural approaches have achieved state-of-the-art performance on several sequence labeling benchmarks. A common data format for sequence labeling task is IOB (Inside-Outside-Beginning), although other alternative formats (e.g. IO, IOBES, BMEWO, BMEWO+, BILOU, etc.) might be used.
-<img src="/sequence_labeling/document/ner.iob.example.png" width=800><br />
-*Figure 1: An NER example in IOB format*
+<p align="center"><img src="/sequence_labeling/document/ner.iob.example.png" width=800></p>
+<p align="center"><i>Figure 1: An NER example in IOB format</i></p>
 
 ## Setting
 * Python 3.6.6
@@ -56,54 +56,54 @@ docker run -p 8500:8500 -v output/xxx/model:models/ner -e MODEL_NAME=ner -t tens
 
 ## Experiment
 ### Bi-LSTM + Char-CNN + Softmax
-<img src="/sequence_labeling/document/BiLSTM_CharCNN_Softmax.architecture.png" width=500><br />
-*Figure 1: Bi-LSTM + Char-CNN + Softmax architecture*
+<p align="center"><img src="/sequence_labeling/document/BiLSTM_CharCNN_Softmax.architecture.png" width=500></p>
+<p align="center"><i>Figure 1: Bi-LSTM + Char-CNN + Softmax architecture</i></p>
 
 |    CoNLL2003 - NER  |    F1 Score   |   Precision   |     Recall    |
 |:-------------------:|:-------------:|:-------------:|:-------------:|
 |         Dev         |     94.92     |     94.97     |     94.87     |
 |        Test         |     91.29     |     90.41     |     92.18     |
 
-*Table 1: The performance of Bi-LSTM + Char-CNN + Softmax on CoNLL2003 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3]*
+<p><i>Table 1: The performance of Bi-LSTM + Char-CNN + Softmax on CoNLL2003 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3]</i></p>
 
 |   OntoNotes5 - NER  |    F1 Score   |   Precision   |     Recall    |
 |:-------------------:|:-------------:|:-------------:|:-------------:|
 |         Dev         |     86.22     |     84.21     |     88.32     |
 |        Test         |     85.09     |     82.66     |     87.67     |
 
-*Table 2: The performance of Bi-LSTM + Char-CNN + Softmax on OntoNotes5 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3,5]*
+<p><i>Table 2: The performance of Bi-LSTM + Char-CNN + Softmax on OntoNotes5 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3,5]</i></p>
 
 |   Treebank3 - POS   |    Accuracy   |
 |:-------------------:|:-------------:|
 |         Dev         |     97.36     |
 |        Test         |     97.58     |
 
-*Table 3: The performance of Bi-LSTM + Char-CNN + Softmax on Treebank3 POS tagging sub-task with setting: num layers = 2, unit dim = 200, window size = [3]*
+<p><i>Table 3: The performance of Bi-LSTM + Char-CNN + Softmax on Treebank3 POS tagging sub-task with setting: num layers = 2, unit dim = 200, window size = [3]</i></p>
 
 ### Bi-LSTM + Char-CNN + CRF
-<img src="/sequence_labeling/document/BiLSTM_CharCNN_CRF.architecture.png" width=500><br />
-*Figure 2: Bi-LSTM + Char-CNN + CRF architecture*
+<p align="center"><img src="/sequence_labeling/document/BiLSTM_CharCNN_CRF.architecture.png" width=500></p>
+<p align="center"><i>Figure 2: Bi-LSTM + Char-CNN + CRF architecture</i></p>
 
 |    CoNLL2003 - NER  |    F1 Score   |   Precision   |     Recall    |
 |:-------------------:|:-------------:|:-------------:|:-------------:|
 |         Dev         |     94.93     |     94.92     |     94.93     |
 |        Test         |     91.30     |     90.47     |     92.15     |
 
-*Table 4: The performance of Bi-LSTM + Char-CNN + CRF on CoNLL2003 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3]*
+<p><i>Table 4: The performance of Bi-LSTM + Char-CNN + CRF on CoNLL2003 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3]</i></p>
 
 |   OntoNotes5 - NER  |    F1 Score   |   Precision   |     Recall    |
 |:-------------------:|:-------------:|:-------------:|:-------------:|
 |         Dev         |     86.45     |     84.11     |     88.93     |
 |        Test         |     85.25     |     82.57     |     88.11     |
 
-*Table 5: The performance of Bi-LSTM + Char-CNN + CRF on OntoNotes5 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3,5]*
+<p><i>Table 5: The performance of Bi-LSTM + Char-CNN + CRF on OntoNotes5 NER sub-task with setting: num layers = 2, unit dim = 200, window size = [3,5]</i></p>
 
 |   Treebank3 - POS   |    Accuracy   |
 |:-------------------:|:-------------:|
 |         Dev         |     97.27     |
 |        Test         |     97.51     |
 
-*Table 6: The performance of Bi-LSTM + Char-CNN + CRF on Treebank3 POS tagging sub-task with setting: num layers = 2, unit dim = 200, window size = [3]*
+<p><i>Table 6: The performance of Bi-LSTM + Char-CNN + CRF on Treebank3 POS tagging sub-task with setting: num layers = 2, unit dim = 200, window size = [3]</i></p>
 
 ## Reference
 * Zhiheng Huang, Wei Xu, and Kai Yu. [Bidirectional LSTM-CRF models for sequence tagging](https://arxiv.org/abs/1508.01991) [2015]
