@@ -1,0 +1,146 @@
+{
+    "hyperparams": {
+        "data_text_word_size": {
+            "stype": "discrete",
+            "set": [145],
+            "dtype": "int"
+        },
+        "data_text_char_size": {
+            "stype": "discrete",
+            "set": [16],
+            "dtype": "int"
+        },
+        "data_label_size": {
+            "stype": "discrete",
+            "set": [145],
+            "dtype": "int"
+        },
+        "train_batch_size": {
+            "stype": "discrete",
+            "set": [10, 20],
+            "dtype": "int"
+        },
+        "train_optimizer_type": {
+            "stype": "discrete",
+            "set": ["adam"],
+            "dtype": "string"
+        },
+        "train_optimizer_learning_rate": {
+            "stype": "log",
+            "range": [0.0001, 0.01],
+            "dtype": "float"
+        },
+        "model_word_embed_dim": {
+            "stype": "discrete",
+            "set": [300],
+            "dtype": "int"
+        },
+        "model_word_dropout": {
+            "stype": "lookup",
+            "key": "dropout",
+            "scale": 1.0,
+            "shift": 0.0,
+            "dtype": "float"
+        },
+        "model_char_embed_dim": {
+            "stype": "discrete",
+            "set": [16, 32, 64],
+            "dtype": "int"
+        },
+        "model_char_unit_dim": {
+            "stype": "discrete",
+            "set": [100],
+            "dtype": "int"
+        },
+        "model_char_window_size": {
+            "stype": "discrete",
+            "set": [[3], [5], [7]],
+            "dtype": "list"
+        },
+        "model_char_hidden_activation": {
+            "stype": "discrete",
+            "set": ["relu"],
+            "dtype": "string"
+        },
+        "model_char_dropout": {
+            "stype": "lookup",
+            "key": "dropout",
+            "scale": 1.0,
+            "shift": 0.0,
+            "dtype": "float"
+        },
+        "model_char_pooling_type": {
+            "stype": "discrete",
+            "set": ["max"],
+            "dtype": "string"
+        },
+        "model_fusion_type": {
+            "stype": "discrete",
+            "set": ["concate"],
+            "dtype": "string"
+        },
+        "model_fusion_num_layer": {
+            "stype": "discrete",
+            "set": [1],
+            "dtype": "int"
+        },
+        "model_fusion_unit_dim": {
+            "stype": "discrete",
+            "set": [400],
+            "dtype": "int"
+        },
+        "model_fusion_hidden_activation": {
+            "stype": "discrete",
+            "set": ["relu"],
+            "dtype": "string"
+        },
+        "model_fusion_dropout": {
+            "stype": "lookup",
+            "key": "dropout",
+            "scale": 1.0,
+            "shift": 0.0,
+            "dtype": "float"
+        },
+        "model_sequence_num_layer": {
+            "stype": "discrete",
+            "set": [1, 2, 3, 4],
+            "dtype": "int"
+        },
+        "model_sequence_unit_dim": {
+            "stype": "discrete",
+            "set": [200],
+            "dtype": "int"
+        },
+        "model_sequence_cell_type": {
+            "stype": "discrete",
+            "set": ["lstm", "gru"],
+            "dtype": "string"
+        },
+        "model_sequence_hidden_activation": {
+            "stype": "discrete",
+            "set": ["tanh", "relu"],
+            "dtype": "string"
+        },
+        "model_sequence_dropout": {
+            "stype": "lookup",
+            "key": "dropout",
+            "scale": 1.0,
+            "shift": 0.0,
+            "dtype": "float"
+        },
+        "model_labeling_dropout": {
+            "stype": "lookup",
+            "key": "dropout",
+            "scale": 1.0,
+            "shift": 0.0,
+            "dtype": "float"
+        }
+    },
+    "variables": {
+        "dropout": {
+            "stype": "uniform",
+            "range": [0.3, 0.7],
+            "dtype": "float"
+        }
+    }
+}
