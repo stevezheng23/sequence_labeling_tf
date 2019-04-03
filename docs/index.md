@@ -1,6 +1,7 @@
 ## Description
 Sequence labeling is a task that assigns categorial label to each element in an input sequence. Many problems can be formalized as sequence labeling task, including speech recognition, video analysis and various problems in NLP (e.g. POS tagging, NER, Chunking, etc.). Traditionally sequence labeling requires large amount of hand-engineered features and domain-specific knowledge, but recently neural approaches have achieved state-of-the-art performance on several sequence labeling benchmarks. A common data format for sequence labeling task is IOB (Inside-Outside-Beginning), although other alternative formats (e.g. IO, IOBES, BMEWO, BMEWO+, BILOU, etc.) might be used.
 ![ner_iob_example]({{ site.url }}/sequence_labeling_tf/ner.iob.example.png){:width="800px"}
+
 *Figure 1: An NER example in IOB format*
 
 ## DataSet
@@ -12,7 +13,8 @@ Sequence labeling is a task that assigns categorial label to each element in an 
 ## Experiment
 ### Bi-LSTM + Char-CNN + Softmax
 ![bilstm_charcnn_softmax_arch]({{ site.url }}/sequence_labeling_tf/BiLSTM_CharCNN_Softmax.architecture.png){:width="500px"}
-*Figure 1: Bi-LSTM + Char-CNN + Softmax architecture*
+
+*Figure 2: Bi-LSTM + Char-CNN + Softmax architecture*
 
 |    CoNLL2003 - NER  |    F1 Score   |   Precision   |     Recall    |
 |:-------------------:|:-------------:|:-------------:|:-------------:|
@@ -37,7 +39,8 @@ Sequence labeling is a task that assigns categorial label to each element in an 
 
 ### Bi-LSTM + Char-CNN + CRF
 ![bilstm_charcnn_crf_arch]({{ site.url }}/sequence_labeling_tf/BiLSTM_CharCNN_CRF.architecture.png){:width="500px"}
-*Figure 2: Bi-LSTM + Char-CNN + CRF architecture*
+
+*Figure 3: Bi-LSTM + Char-CNN + CRF architecture*
 
 |    CoNLL2003 - NER  |    F1 Score   |   Precision   |     Recall    |
 |:-------------------:|:-------------:|:-------------:|:-------------:|
