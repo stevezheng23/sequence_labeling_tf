@@ -1,0 +1,3 @@
+theme: jekyll-theme-cayman
+title: Sequence Labeling
+description: This project is a Sequence Labeling framework in TensorFlow. It contains re-implementations for several model architectures (e.g. Bi-LSTM + Char-CNN + Softmax, Bi-LSTM + Char-CNN + CRF, etc.). Named Entity Recognition (NER) benchmarks on CoNLL2003/OntoNotes and Part-of-Speech Tagging (POS Tagging) benchmarks on Treebank3 dataset are also provided.
