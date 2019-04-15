@@ -36,6 +36,8 @@ class AttentionCRF(BaseModel):
             text_word_mask = self.data_pipeline.input_text_word_mask
             text_char = self.data_pipeline.input_text_char
             text_char_mask = self.data_pipeline.input_text_char_mask
+            text_ext = None
+            text_ext_mask = None
             label_inverted_index = self.data_pipeline.label_inverted_index
             self.word_vocab_size = self.data_pipeline.word_vocab_size
             self.char_vocab_size = self.data_pipeline.char_vocab_size
@@ -43,7 +45,8 @@ class AttentionCRF(BaseModel):
             
             """build graph for attention crf model"""
             self.logger.log_print("# build graph")
-            predict, predict_mask, transition_matrix = self._build_graph(text_word, text_word_mask, text_char, text_char_mask)
+            predict, predict_mask, transition_matrix = self._build_graph(text_word,
+                text_word_mask, text_char, text_char_mask, text_ext, text_ext_mask)
             masked_predict = predict * predict_mask
             self.index_predict, _ = tf.contrib.crf.crf_decode(masked_predict, transition_matrix, self.sequence_length)
             self.text_predict = label_inverted_index.lookup(tf.cast(self.index_predict, dtype=tf.int64))
@@ -146,7 +149,9 @@ class AttentionCRF(BaseModel):
                                     text_word,
                                     text_word_mask,
                                     text_char,
-                                    text_char_mask):
+                                    text_char_mask,
+                                    text_ext,
+                                    text_ext_mask):
         """build representation layer for attention crf model"""
         word_embed_dim = self.hyperparams.model_word_embed_dim
         word_dropout = self.hyperparams.model_word_dropout if self.mode == "train" else 0.0
@@ -162,6 +167,9 @@ class AttentionCRF(BaseModel):
         char_pooling_type = self.hyperparams.model_char_pooling_type
         char_feat_trainable = self.hyperparams.model_char_feat_trainable
         char_feat_enable = self.hyperparams.model_char_feat_enable
+        ext_embed_dim = self.hyperparams.model_ext_embed_dim
+        ext_feat_enable = self.hyperparams.model_ext_feat_enable
+        ext_feat_mode = self.hyperparams.model_ext_feat_mode
         fusion_type = self.hyperparams.model_fusion_type
         fusion_num_layer = self.hyperparams.model_fusion_num_layer
         fusion_unit_dim = self.hyperparams.model_fusion_unit_dim
@@ -206,7 +214,16 @@ class AttentionCRF(BaseModel):
             else:
                 char_unit_dim = 0
             
-            feat_unit_dim = word_unit_dim + char_unit_dim
+            if ext_feat_enable == True and ext_feat_mode == "fusion":
+                self.logger.log_print("# build extended representation layer")
+                text_feat_list.append(text_ext)
+                text_feat_mask_list.append(text_ext_mask)
+                
+                ext_unit_dim = ext_embed_dim
+            else:
+                ext_unit_dim = 0
+            
+            feat_unit_dim = word_unit_dim + char_unit_dim + ext_unit_dim
             feat_fusion_layer = FusionModule(input_unit_dim=feat_unit_dim, output_unit_dim=fusion_unit_dim,
                 fusion_type=fusion_type, num_layer=fusion_num_layer, activation=fusion_hidden_activation,
                 dropout=fusion_dropout, num_gpus=self.num_gpus, default_gpu_id=self.default_gpu_id,
@@ -218,8 +235,13 @@ class AttentionCRF(BaseModel):
     
     def _build_modeling_layer(self,
                               text_feat,
-                              text_feat_mask):
+                              text_feat_mask,
+                              text_ext,
+                              text_ext_mask):
         """build modeling layer for attention crf model"""
+        ext_embed_dim = self.hyperparams.model_ext_embed_dim
+        ext_feat_enable = self.hyperparams.model_ext_feat_enable
+        ext_feat_mode = self.hyperparams.model_ext_feat_mode
         attention_num_layer = self.hyperparams.model_attention_num_layer
         attention_num_head = self.hyperparams.model_attention_num_head
         attention_unit_dim = self.hyperparams.model_attention_unit_dim
@@ -254,6 +276,11 @@ class AttentionCRF(BaseModel):
             if labeling_transferable == False:
                 pre_labeling_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES)
             
+            if ext_feat_enable == True and ext_feat_mode == "direct":
+                text_attention_modeling = tf.concat([text_attention_modeling, text_ext], axis=-1)
+                text_attention_modeling_mask = tf.reduce_max(tf.concat(
+                    [text_attention_modeling_mask, text_ext_mask], axis=-1), axis=-1, keepdims=True)
+            
             labeling_modeling_layer = create_dense_layer("single", 1, labeling_unit_dim, 1, "", [labeling_dropout], None,
                 False, False, True, self.num_gpus, self.default_gpu_id, self.regularizer, self.random_seed, labeling_trainable)
             
@@ -277,16 +304,18 @@ class AttentionCRF(BaseModel):
                      text_word,
                      text_word_mask,
                      text_char,
-                     text_char_mask):
+                     text_char_mask,
+                     text_ext,
+                     text_ext_mask):
         """build graph for attention crf model"""
         with tf.variable_scope("graph", reuse=tf.AUTO_REUSE):
             """build representation layer for attention crf model"""
             text_feat, text_feat_mask = self._build_representation_layer(text_word,
-                text_word_mask, text_char, text_char_mask)
+                text_word_mask, text_char, text_char_mask, text_ext, text_ext_mask)
             
             """build modeling layer for attention crf model"""
             (text_modeling, text_modeling_mask,
-                text_modeling_matrix) = self._build_modeling_layer(text_feat, text_feat_mask)
+                text_modeling_matrix) = self._build_modeling_layer(text_feat, text_feat_mask, text_ext, text_ext_mask)
             
             predict = text_modeling
             predict_mask = text_modeling_mask
