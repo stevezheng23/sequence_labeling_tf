@@ -88,8 +88,6 @@
     "model_char_feat_trainable": true,
     "model_char_feat_enable": true,
     "model_ext_embed_dim": 100,
-    "model_ext_dropout": 0.5,
-    "model_ext_feat_trainable": false,
     "model_ext_feat_enable": false,
     "model_ext_feat_mode": "direct",
     "model_fusion_type": "concate",
