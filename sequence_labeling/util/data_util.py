@@ -8,8 +8,8 @@ import tensorflow as tf
 
 from util.default_util import *
 
-__all__ = ["DataPipeline", "create_online_pipeline", "create_dynamic_pipeline",
-           "create_data_pipeline", "create_text_dataset", "create_label_dataset",
+__all__ = ["DataPipeline", "create_online_pipeline", "create_dynamic_pipeline", "create_data_pipeline",
+           "create_text_dataset", "create_label_dataset", "create_ext_dataset",
            "generate_word_feat", "generate_char_feat", "generate_label_feat",
            "create_embedding_file", "load_embedding_file", "convert_embedding",
            "create_vocab_file", "load_vocab_file", "process_vocab_table",
@@ -19,9 +19,9 @@ __all__ = ["DataPipeline", "create_online_pipeline", "create_dynamic_pipeline",
 
 class DataPipeline(collections.namedtuple("DataPipeline",
     ("initializer", "word_vocab_size", "char_vocab_size", "input_text_word", "input_text_char",
-     "input_label", "input_text_word_mask", "input_text_char_mask", "input_label_mask", "label_inverted_index",
-     "input_text_placeholder", "input_word_placeholder", "input_char_placeholder",
-     "input_label_placeholder", "data_size_placeholder", "batch_size_placeholder"))):
+     "input_label", "input_ext", "input_text_word_mask", "input_text_char_mask", "input_label_mask", "input_ext_mask",
+     "label_inverted_index", "input_text_placeholder", "input_word_placeholder", "input_char_placeholder",
+     "input_label_placeholder", "input_ext_placeholder", "data_size_placeholder", "batch_size_placeholder"))):
     pass
 
 def create_online_pipeline(external_index_enable,
@@ -35,7 +35,10 @@ def create_online_pipeline(external_index_enable,
                            char_max_size,
                            char_pad,
                            char_feat_enable,
-                           label_inverted_index):
+                           label_inverted_index,
+                           ext_max_size,
+                           ext_embed_dim,
+                           ext_feat_enable):
     """create online data pipeline for sequence labeling model"""
     input_text_placeholder = None
     input_word_placeholder = None
@@ -44,9 +47,11 @@ def create_online_pipeline(external_index_enable,
     input_text_word_mask = None
     input_text_char = None
     input_text_char_mask = None
+    
     if external_index_enable == True:
         input_word_placeholder = tf.placeholder(shape=[None, None], dtype=tf.int32)
         input_char_placeholder = tf.placeholder(shape=[None, None, None], dtype=tf.int32)
+        input_ext_placeholder = tf.placeholder(shape=[None, None, None], dtype=tf.float32)
         if word_feat_enable == True:
             word_pad_id = tf.cast(word_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
             input_text_word = tf.expand_dims(input_word_placeholder[:,:word_max_size], axis=-1)
@@ -56,8 +61,15 @@ def create_online_pipeline(external_index_enable,
             char_pad_id = tf.cast(char_vocab_index.lookup(tf.constant(char_pad)), dtype=tf.int32)
             input_text_char = input_char_placeholder[:,:word_max_size,:char_max_size]
             input_text_char_mask = tf.cast(tf.not_equal(input_text_char, char_pad_id), dtype=tf.float32)
+        
+        if ext_feat_enable == True:
+            ext_pad_id = tf.cast(word_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
+            input_ext = input_ext_placeholder[:,:ext_max_size,:ext_embed_dim]
+            input_ext_mask = tf.expand_dims(input_word_placeholder[:,:ext_max_size], axis=-1)
+            input_ext_mask = tf.cast(tf.not_equal(input_ext_mask, ext_pad_id), dtype=tf.float32)
     else:
         input_text_placeholder = tf.placeholder(shape=[None], dtype=tf.string)
+        input_ext_placeholder = tf.placeholder(shape=[None, None, None], dtype=tf.float32)
         if word_feat_enable == True:
             word_pad_id = tf.cast(word_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
             input_text_word = tf.map_fn(lambda sent: generate_word_feat(sent,
@@ -69,17 +81,25 @@ def create_online_pipeline(external_index_enable,
             input_text_char = tf.map_fn(lambda sent: generate_char_feat(sent,
                 word_max_size, char_vocab_index, char_max_size, char_pad), input_text_placeholder, dtype=tf.int32)
             input_text_char_mask = tf.cast(tf.not_equal(input_text_char, char_pad_id), dtype=tf.float32)
+        
+        if ext_feat_enable == True:
+            ext_pad_id = tf.cast(word_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
+            input_ext = input_ext_placeholder[:,:ext_max_size,:ext_embed_dim]
+            input_ext_mask = tf.map_fn(lambda sent: generate_word_feat(sent,
+                word_vocab_index, word_max_size, word_pad), input_text_placeholder, dtype=tf.int32)
+            input_ext_mask = tf.cast(tf.not_equal(input_ext_mask, ext_pad_id), dtype=tf.float32)
     
     return DataPipeline(initializer=None, word_vocab_size=word_vocab_size, char_vocab_size=char_vocab_size,
-        input_text_word=input_text_word, input_text_char=input_text_char, input_label=None,
+        input_text_word=input_text_word, input_text_char=input_text_char, input_label=None, input_ext=input_ext,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask, input_label_mask=None,
-        label_inverted_index=label_inverted_index, input_text_placeholder=input_text_placeholder,
+        input_ext_mask=input_ext_mask, label_inverted_index=label_inverted_index, input_text_placeholder=input_text_placeholder,
         input_word_placeholder=input_word_placeholder, input_char_placeholder=input_char_placeholder,
-        input_label_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
+        input_label_placeholder=None, input_ext_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
 
 def create_dynamic_pipeline(input_text_word_dataset,
                             input_text_char_dataset,
                             input_label_dataset,
+                            input_ext_dataset,
                             word_vocab_size,
                             word_vocab_index,
                             word_pad,
@@ -91,101 +111,39 @@ def create_dynamic_pipeline(input_text_word_dataset,
                             label_vocab_index,
                             label_inverted_index,
                             label_pad,
+                            ext_feat_enable,
                             random_seed,
                             enable_shuffle,
                             buffer_size,
                             input_text_placeholder,
                             input_label_placeholder,
+                            input_ext_placeholder,
                             data_size_placeholder,
                             batch_size_placeholder):
     """create dynamic data pipeline for sequence labeling model"""
-    default_pad_id = tf.constant(0, shape=[], dtype=tf.int32)
-    default_dataset_tensor = tf.constant(0, shape=[1,1], dtype=tf.int32)
-    
     if word_feat_enable == True:
         word_pad_id = tf.cast(word_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
     else:
-        word_pad_id = default_pad_id
-        input_text_word_dataset = tf.data.Dataset.from_tensors(default_dataset_tensor).repeat(data_size_placeholder)
+        word_pad_id = tf.constant(0, shape=[], dtype=tf.int32)
+        input_text_word_dataset = tf.data.Dataset.from_tensors(
+            tf.constant(0, shape=[1,1], dtype=tf.float32)).repeat(data_size)
     
     if char_feat_enable == True:
         char_pad_id = tf.cast(char_vocab_index.lookup(tf.constant(char_pad)), dtype=tf.int32)
     else:
-        char_pad_id = default_pad_id
-        input_text_char_dataset = tf.data.Dataset.from_tensors(default_dataset_tensor).repeat(data_size_placeholder)
-        
-    dataset = tf.data.Dataset.zip((input_text_word_dataset, input_text_char_dataset, input_label_dataset))
+        char_pad_id = tf.constant(0, shape=[], dtype=tf.int32)
+        input_text_char_dataset = tf.data.Dataset.from_tensors(
+            tf.constant(0, shape=[1,1], dtype=tf.float32)).repeat(data_size)
     
-    if enable_shuffle == True:
-        dataset = dataset.shuffle(buffer_size, random_seed)
-    
-    dataset = dataset.batch(batch_size=batch_size_placeholder)
-    dataset = dataset.prefetch(buffer_size=1)
-    
-    iterator = dataset.make_initializable_iterator()
-    batch_data = iterator.get_next()
-    
-    if word_feat_enable == True:
-        input_text_word = batch_data[0]
-        input_text_word_mask = tf.cast(tf.not_equal(batch_data[0], word_pad_id), dtype=tf.float32)
+    if ext_feat_enable == True:
+        ext_pad_id = tf.cast(char_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
     else:
-        input_text_word = None
-        input_text_word_mask = None
+        ext_pad_id = tf.constant(0, shape=[], dtype=tf.int32)
+        input_ext_dataset = tf.data.Dataset.from_tensors(
+            tf.constant(0, shape=[1,1], dtype=tf.float32)).repeat(data_size)
     
-    if char_feat_enable == True:
-        input_text_char = batch_data[1]
-        input_text_char_mask = tf.cast(tf.not_equal(batch_data[1], char_pad_id), dtype=tf.float32)
-    else:
-        input_text_char = None
-        input_text_char_mask = None
-    
-    label_pad_id = tf.cast(label_vocab_index.lookup(tf.constant(label_pad)), dtype=tf.int32)
-    input_label = tf.cast(batch_data[2], dtype=tf.float32)
-    input_label_mask = tf.cast(tf.not_equal(batch_data[2], label_pad_id), dtype=tf.float32)
-    
-    return DataPipeline(initializer=iterator.initializer, word_vocab_size=word_vocab_size, char_vocab_size=char_vocab_size,
-        input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
-        input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
-        input_label_mask=input_label_mask, label_inverted_index=label_inverted_index, input_text_placeholder=input_text_placeholder,
-        input_word_placeholder=None, input_char_placeholder=None, input_label_placeholder=input_label_placeholder,
-        data_size_placeholder=data_size_placeholder, batch_size_placeholder=batch_size_placeholder)
-
-def create_data_pipeline(input_text_word_dataset,
-                         input_text_char_dataset,
-                         input_label_dataset,
-                         word_vocab_size,
-                         word_vocab_index,
-                         word_pad,
-                         word_feat_enable,
-                         char_vocab_size,
-                         char_vocab_index,
-                         char_pad,
-                         char_feat_enable,
-                         label_vocab_index,
-                         label_inverted_index,
-                         label_pad,
-                         random_seed,
-                         enable_shuffle,
-                         buffer_size,
-                         data_size,
-                         batch_size):
-    """create data pipeline for sequence labeling model"""
-    default_pad_id = tf.constant(0, shape=[], dtype=tf.int32)
-    default_dataset_tensor = tf.constant(0, shape=[1,1], dtype=tf.int32)
-    
-    if word_feat_enable == True:
-        word_pad_id = tf.cast(word_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
-    else:
-        word_pad_id = default_pad_id
-        input_text_word_dataset = tf.data.Dataset.from_tensors(default_dataset_tensor).repeat(data_size)
-    
-    if char_feat_enable == True:
-        char_pad_id = tf.cast(char_vocab_index.lookup(tf.constant(char_pad)), dtype=tf.int32)
-    else:
-        char_pad_id = default_pad_id
-        input_text_char_dataset = tf.data.Dataset.from_tensors(default_dataset_tensor).repeat(data_size)
-    
-    dataset = tf.data.Dataset.zip((input_text_word_dataset, input_text_char_dataset, input_label_dataset))
+    dataset = tf.data.Dataset.zip((input_text_word_dataset,
+        input_text_char_dataset, input_label_dataset, input_ext_dataset))
     
     if enable_shuffle == True:
         dataset = dataset.shuffle(buffer_size, random_seed)
@@ -197,31 +155,128 @@ def create_data_pipeline(input_text_word_dataset,
     batch_data = iterator.get_next()
     
     if word_feat_enable == True:
-        input_text_word = batch_data[0]
-        input_text_word_mask = tf.cast(tf.not_equal(batch_data[0], word_pad_id), dtype=tf.float32)
+        input_text_word = tf.cast(batch_data[0], dtype=tf.int32)
+        input_text_word_mask = tf.cast(tf.not_equal(input_text_word, word_pad_id), dtype=tf.float32)
     else:
         input_text_word = None
         input_text_word_mask = None
     
     if char_feat_enable == True:
-        input_text_char = batch_data[1]
-        input_text_char_mask = tf.cast(tf.not_equal(batch_data[1], char_pad_id), dtype=tf.float32)
+        input_text_char = tf.cast(batch_data[1], dtype=tf.int32)
+        input_text_char_mask = tf.cast(tf.not_equal(input_text_char, char_pad_id), dtype=tf.float32)
     else:
         input_text_char = None
         input_text_char_mask = None
     
-    label_pad_id = tf.cast(label_vocab_index.lookup(tf.constant(label_pad)), dtype=tf.int32)
+    label_pad_id = tf.cast(label_vocab_index.lookup(tf.constant(label_pad)), dtype=tf.float32)
     input_label = tf.cast(batch_data[2], dtype=tf.float32)
-    input_label_mask = tf.cast(tf.not_equal(batch_data[2], label_pad_id), dtype=tf.float32)
+    input_label_mask = tf.cast(tf.not_equal(input_label, label_pad_id), dtype=tf.float32)
+    
+    if ext_feat_enable == True:
+        input_ext = tf.cast(batch_data[3], dtype=tf.float32)
+        input_ext_mask = tf.cast(batch_data[0], dtype=tf.int32)
+        input_ext_mask = tf.cast(tf.not_equal(input_ext_mask, ext_pad_id), dtype=tf.float32)
+    else:
+        input_ext = None
+        input_ext_mask = None
     
     return DataPipeline(initializer=iterator.initializer, word_vocab_size=word_vocab_size, char_vocab_size=char_vocab_size,
-        input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label,
+        input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label, input_ext=input_ext,
         input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
-        input_label_mask=input_label_mask, label_inverted_index=label_inverted_index,
-        input_text_placeholder=None, input_word_placeholder=None, input_char_placeholder=None, 
-        input_label_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
+        input_label_mask=input_label_mask, input_ext_mask=input_ext_mask, label_inverted_index=label_inverted_index,
+        input_text_placeholder=input_text_placeholder, input_word_placeholder=None, input_char_placeholder=None,
+        input_label_placeholder=input_label_placeholder, input_ext_placeholder=input_ext_placeholder,
+        data_size_placeholder=data_size_placeholder, batch_size_placeholder=batch_size_placeholder)
 
-def create_text_dataset(input_data_set,
+def create_data_pipeline(input_text_word_dataset,
+                         input_text_char_dataset,
+                         input_label_dataset,
+                         input_ext_dataset,
+                         word_vocab_size,
+                         word_vocab_index,
+                         word_pad,
+                         word_feat_enable,
+                         char_vocab_size,
+                         char_vocab_index,
+                         char_pad,
+                         char_feat_enable,
+                         label_vocab_index,
+                         label_inverted_index,
+                         label_pad,
+                         ext_feat_enable,
+                         random_seed,
+                         enable_shuffle,
+                         buffer_size,
+                         data_size,
+                         batch_size):
+    """create data pipeline for sequence labeling model"""
+    if word_feat_enable == True:
+        word_pad_id = tf.cast(word_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
+    else:
+        word_pad_id = tf.constant(0, shape=[], dtype=tf.int32)
+        input_text_word_dataset = tf.data.Dataset.from_tensors(
+            tf.constant(0, shape=[1,1], dtype=tf.float32)).repeat(data_size)
+    
+    if char_feat_enable == True:
+        char_pad_id = tf.cast(char_vocab_index.lookup(tf.constant(char_pad)), dtype=tf.int32)
+    else:
+        char_pad_id = tf.constant(0, shape=[], dtype=tf.int32)
+        input_text_char_dataset = tf.data.Dataset.from_tensors(
+            tf.constant(0, shape=[1,1], dtype=tf.float32)).repeat(data_size)
+    
+    if ext_feat_enable == True:
+        ext_pad_id = tf.cast(char_vocab_index.lookup(tf.constant(word_pad)), dtype=tf.int32)
+    else:
+        ext_pad_id = tf.constant(0, shape=[], dtype=tf.int32)
+        input_ext_dataset = tf.data.Dataset.from_tensors(
+            tf.constant(0, shape=[1,1], dtype=tf.float32)).repeat(data_size)
+    
+    dataset = tf.data.Dataset.zip((input_text_word_dataset,
+        input_text_char_dataset, input_label_dataset, input_ext_dataset))
+    
+    if enable_shuffle == True:
+        dataset = dataset.shuffle(buffer_size, random_seed)
+    
+    dataset = dataset.batch(batch_size=batch_size)
+    dataset = dataset.prefetch(buffer_size=1)
+    
+    iterator = dataset.make_initializable_iterator()
+    batch_data = iterator.get_next()
+    
+    if word_feat_enable == True:
+        input_text_word = tf.cast(batch_data[0], dtype=tf.int32)
+        input_text_word_mask = tf.cast(tf.not_equal(input_text_word, word_pad_id), dtype=tf.float32)
+    else:
+        input_text_word = None
+        input_text_word_mask = None
+    
+    if char_feat_enable == True:
+        input_text_char = tf.cast(batch_data[1], dtype=tf.int32)
+        input_text_char_mask = tf.cast(tf.not_equal(input_text_char, char_pad_id), dtype=tf.float32)
+    else:
+        input_text_char = None
+        input_text_char_mask = None
+    
+    label_pad_id = tf.cast(label_vocab_index.lookup(tf.constant(label_pad)), dtype=tf.float32)
+    input_label = tf.cast(batch_data[2], dtype=tf.float32)
+    input_label_mask = tf.cast(tf.not_equal(input_label, label_pad_id), dtype=tf.float32)
+    
+    if ext_feat_enable == True:
+        input_ext = tf.cast(batch_data[3], dtype=tf.float32)
+        input_ext_mask = tf.cast(batch_data[0], dtype=tf.int32)
+        input_ext_mask = tf.cast(tf.not_equal(input_ext_mask, ext_pad_id), dtype=tf.float32)
+    else:
+        input_ext = None
+        input_ext_mask = None
+    
+    return DataPipeline(initializer=iterator.initializer, word_vocab_size=word_vocab_size, char_vocab_size=char_vocab_size,
+        input_text_word=input_text_word, input_text_char=input_text_char, input_label=input_label, input_ext=input_ext,
+        input_text_word_mask=input_text_word_mask, input_text_char_mask=input_text_char_mask,
+        input_label_mask=input_label_mask, input_ext_mask=input_ext_mask, label_inverted_index=label_inverted_index,
+        input_text_placeholder=None, input_word_placeholder=None, input_char_placeholder=None, 
+        input_label_placeholder=None, input_ext_placeholder=None, data_size_placeholder=None, batch_size_placeholder=None)
+
+def create_text_dataset(input_dataset,
                         word_vocab_index,
                         word_max_size,
                         word_pad,
@@ -234,26 +289,40 @@ def create_text_dataset(input_data_set,
     """create word/char-level dataset for input data"""
     word_dataset = None
     if word_feat_enable == True:
-        word_dataset = input_data_set.map(lambda sent: generate_word_feat(sent,
+        word_dataset = input_dataset.map(lambda sent: generate_word_feat(sent,
             word_vocab_index, word_max_size, word_pad), num_parallel_calls=num_parallel)
     
     char_dataset = None
     if char_feat_enable == True:
-        char_dataset = input_data_set.map(lambda sent: generate_char_feat(sent,
+        char_dataset = input_dataset.map(lambda sent: generate_char_feat(sent,
             word_max_size, char_vocab_index, char_max_size, char_pad), num_parallel_calls=num_parallel)
     
     return word_dataset, char_dataset
 
-def create_label_dataset(input_data_set,
+def create_label_dataset(input_dataset,
                          label_vocab_index,
                          label_max_size,
                          label_pad,
                          num_parallel):
     """create label dataset for input data"""
-    label_dataset = input_data_set.map(lambda sent: generate_label_feat(sent,
+    label_dataset = input_dataset.map(lambda sent: generate_label_feat(sent,
         label_vocab_index, label_max_size, label_pad), num_parallel_calls=num_parallel)
     
     return label_dataset
+
+def create_ext_dataset(input_dataset,
+                       ext_max_size,
+                       ext_embed_dim,
+                       ext_pad,
+                       ext_feat_enable,
+                       num_parallel):
+    """create extended dataset for input data"""
+    ext_dataset = None
+    if ext_feat_enable == True:
+        ext_dataset = input_dataset.map(lambda ext: generate_ext_feat(ext,
+            ext_max_size, ext_embed_dim, ext_pad), num_parallel_calls=num_parallel)
+    
+    return ext_dataset
 
 def generate_word_feat(sentence,
                        word_vocab_index,
@@ -264,7 +333,7 @@ def generate_word_feat(sentence,
     sentence_words = tf.concat([sentence_words[:word_max_size],
         tf.constant(word_pad, shape=[word_max_size])], axis=0)
     sentence_words = tf.reshape(sentence_words[:word_max_size], shape=[word_max_size])
-    sentence_words = tf.cast(word_vocab_index.lookup(sentence_words), dtype=tf.int32)
+    sentence_words = tf.cast(word_vocab_index.lookup(sentence_words), dtype=tf.float32)
     sentence_words = tf.expand_dims(sentence_words, axis=-1)
     
     return sentence_words
@@ -289,7 +358,7 @@ def generate_char_feat(sentence,
         tf.constant(char_pad, shape=[word_max_size])], axis=0)
     sentence_words = tf.reshape(sentence_words[:word_max_size], shape=[word_max_size])
     sentence_chars = tf.map_fn(word_to_char, sentence_words)
-    sentence_chars = tf.cast(char_vocab_index.lookup(sentence_chars), dtype=tf.int32)
+    sentence_chars = tf.cast(char_vocab_index.lookup(sentence_chars), dtype=tf.float32)
     
     return sentence_chars
 
@@ -302,10 +371,22 @@ def generate_label_feat(sentence,
     sentence_labels = tf.concat([sentence_labels[:label_max_size],
         tf.constant(label_pad, shape=[label_max_size])], axis=0)
     sentence_labels = tf.reshape(sentence_labels[:label_max_size], shape=[label_max_size])
-    sentence_labels = tf.cast(label_vocab_index.lookup(sentence_labels), dtype=tf.int32)
+    sentence_labels = tf.cast(label_vocab_index.lookup(sentence_labels), dtype=tf.float32)
     sentence_labels = tf.expand_dims(sentence_labels, axis=-1)
     
     return sentence_labels
+
+def generate_ext_feat(ext_data,
+                      ext_max_size,
+                      ext_embed_dim,
+                      ext_pad):
+    """process words for sentence"""
+    ext_feat = tf.concat([ext_data[:ext_max_size,:ext_embed_dim],
+        tf.constant(ext_pad, shape=[ext_max_size,ext_embed_dim])], axis=0)
+    ext_feat = tf.reshape(ext_feat[:ext_max_size,:ext_embed_dim], shape=[ext_max_size,ext_embed_dim])
+    ext_feat = tf.cast(ext_feat, dtype=tf.float32)
+    
+    return ext_feat
 
 def create_embedding_file(embedding_file,
                           embedding_table):
@@ -461,11 +542,9 @@ def create_label_vocab(input_data):
 def load_tsv_data(input_file):
     """load data from tsv file"""
     if os.path.exists(input_file):
-        input_data = []
-        text_data = []
-        label_data = []
-        item_separator = "\t"
         with codecs.getreader("utf-8")(open(input_file, "rb")) as file:
+            input_data = []
+            item_separator = "\t"
             for line in file:
                 items = line.strip().split(item_separator)
                 if len(items) < 3:
@@ -475,47 +554,42 @@ def load_tsv_data(input_file):
                 text = items[1]
                 label = items[2]
                 
+                if len(items) > 3:
+                    ext_data = json.loads(items[3])
+                else:
+                    ext_data = []
+                
                 input_data.append({
                     "id": sample_id,
                     "text": text,
-                    "label": label
+                    "label": label,
+                    "extended": ext_data
                 })
-                
-                text_data.append(text)
-                label_data.append(label)
-        
-        return input_data, text_data, label_data
+            
+            return input_data
     else:
         raise FileNotFoundError("input file not found")
 
 def load_json_data(input_file):
     """load data from json file"""
     if os.path.exists(input_file):
-        text_data = []
-        label_data = []
         with codecs.getreader("utf-8")(open(input_file, "rb") ) as file:
             input_data = json.load(file)
-            for item in input_data:
-                text = item["text"]
-                label = item["label"]
-                text_data.append(text)
-                label_data.append(label)
-        
-        return input_data, text_data, label_data
+            return input_data
     else:
         raise FileNotFoundError("input file not found")
 
 def load_sequence_data(input_file,
-                         file_type):
+                       file_type):
     """load sequence data from input file"""
     if file_type == "tsv":
-        input_data, text_data, label_data = load_tsv_data(input_file)
+        input_data = load_tsv_data(input_file)
     elif file_type == "json":
-        input_data, text_data, label_data = load_json_data(input_file)
+        input_data = load_json_data(input_file)
     else:
         raise ValueError("can not load data from unsupported file type {0}".format(file_type))
     
-    return input_data, text_data, label_data
+    return input_data
 
 def prepare_text_data(logger,
                       input_data,
@@ -663,16 +737,14 @@ def prepare_sequence_data(logger,
                           label_pad):
     """prepare sequence data"""
     logger.log_print("# loading input sequence data from {0}".format(input_sequence_file))
-    (input_sequence_data, input_text_data,
-        input_label_data) = load_sequence_data(input_sequence_file, input_file_type)
+    input_sequence_data = load_sequence_data(input_sequence_file, input_file_type)
 
     input_sequence_size = len(input_sequence_data)
-    input_text_size = len(input_text_data)
-    input_label_size = len(input_label_data)
     logger.log_print("# input sequence data has {0} lines".format(input_sequence_size))
-
-    if (input_text_size != input_sequence_size or input_label_size != input_sequence_size):
-        raise ValueError("text & label input data must have the same size")
+    
+    input_text_data = [sequence_data["text"] for sequence_data in input_sequence_data]
+    input_label_data = [sequence_data["label"] for sequence_data in input_sequence_data]
+    input_ext_data = [sequence_data["extended"] if "extended" in sequence_data else [] for sequence_data in input_sequence_data]
     
     (word_embed_data, word_vocab_size, word_vocab_index, word_vocab_inverted_index,
         char_vocab_size, char_vocab_index, char_vocab_inverted_index) = prepare_text_data(logger, input_text_data,
@@ -683,7 +755,7 @@ def prepare_sequence_data(logger,
     label_vocab_size, label_vocab_index, label_vocab_inverted_index = prepare_label_data(logger, input_label_data,
         label_vocab_file, label_vocab_size, label_unk, label_pad)
     
-    return (input_sequence_data, input_text_data, input_label_data,
+    return (input_sequence_data, input_text_data, input_label_data, input_ext_data,
         word_embed_data, word_vocab_size, word_vocab_index, word_vocab_inverted_index,
         char_vocab_size, char_vocab_index, char_vocab_inverted_index,
         label_vocab_size, label_vocab_index, label_vocab_inverted_index)
