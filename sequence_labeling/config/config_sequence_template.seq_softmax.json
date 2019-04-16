@@ -8,6 +8,7 @@
     "data_text_word_size": 145,
     "data_text_char_size": 16,
     "data_label_size": 145,
+    "data_ext_max_size": 145,
     "data_word_vocab_file": "data/pos/resource/pos.word.vocab",
     "data_word_vocab_size": 42248,
     "data_word_vocab_threshold": 0,
