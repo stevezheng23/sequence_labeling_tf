@@ -8,6 +8,7 @@
     "data_text_word_size": 130,
     "data_text_char_size": 16,
     "data_label_size": 130,
+    "data_ext_max_size": 130,
     "data_word_vocab_file": "data/ner/resource/ner.word.vocab",
     "data_word_vocab_size": 26851,
     "data_word_vocab_threshold": 0,
