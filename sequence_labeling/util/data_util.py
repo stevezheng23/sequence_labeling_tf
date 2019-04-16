@@ -148,7 +148,7 @@ def create_dynamic_pipeline(input_text_word_dataset,
     if enable_shuffle == True:
         dataset = dataset.shuffle(buffer_size, random_seed)
     
-    dataset = dataset.batch(batch_size=batch_size)
+    dataset = dataset.batch(batch_size=batch_size_placeholder)
     dataset = dataset.prefetch(buffer_size=1)
     
     iterator = dataset.make_initializable_iterator()
