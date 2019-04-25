@@ -230,12 +230,12 @@ def create_online_model(logger,
     return OnlineModel(model=model, data_pipeline=data_pipeline)
 
 def get_model_creator(model_type):
-    if model_type == "seq_crf":
+    if model_type == "seq_softmax":
+        model_creator = SequenceSoftmax
+    elif model_type == "seq_crf":
         model_creator = SequenceCRF
     elif model_type == "att_crf":
         model_creator = AttentionCRF
-    elif model_type == "seq_softmax":
-        model_creator = SequenceSoftmax
     else:
         raise ValueError("can not create model with unsupported model type {0}".format(model_type))
     
