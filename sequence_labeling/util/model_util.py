@@ -203,7 +203,7 @@ def create_eval_model(logger,
 
 def create_online_model(logger,
                         hyperparams):
-    logger.log_print("# prepare online data")    
+    logger.log_print("# prepare online data")
     (word_embed_data, word_vocab_size, word_vocab_index,
         word_vocab_inverted_index, char_vocab_size, char_vocab_index,
         char_vocab_inverted_index) = prepare_text_data(logger, None, hyperparams.data_word_vocab_file,

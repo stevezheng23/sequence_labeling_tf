@@ -159,7 +159,6 @@ class SequenceSoftmax(BaseModel):
         word_embed_dim = self.hyperparams.model_word_embed_dim
         word_dropout = self.hyperparams.model_word_dropout if self.mode == "train" else 0.0
         word_embed_pretrained = self.hyperparams.model_word_embed_pretrained
-        word_feat_feedable = False if self.mode == "online" else True
         word_feat_trainable = self.hyperparams.model_word_feat_trainable
         word_feat_enable = self.hyperparams.model_word_feat_enable
         char_embed_dim = self.hyperparams.model_char_embed_dim
@@ -187,9 +186,9 @@ class SequenceSoftmax(BaseModel):
             if word_feat_enable == True:
                 self.logger.log_print("# build word-level representation layer")
                 word_feat_layer = WordFeat(vocab_size=self.word_vocab_size, embed_dim=word_embed_dim,
-                    dropout=word_dropout, pretrained=word_embed_pretrained, embedding=self.word_embedding,
+                    dropout=word_dropout, pretrained=word_embed_pretrained, embed_data=self.word_embedding,
                     num_gpus=self.num_gpus, default_gpu_id=self.default_gpu_id, regularizer=self.regularizer,
-                    random_seed=self.random_seed, feedable=word_feat_feedable, trainable=word_feat_trainable)
+                    random_seed=self.random_seed, trainable=word_feat_trainable)
                 
                 (text_word_feat,
                     text_word_feat_mask) = word_feat_layer(text_word, text_word_mask)
@@ -197,10 +196,8 @@ class SequenceSoftmax(BaseModel):
                 text_feat_mask_list.append(text_word_feat_mask)
                 
                 word_unit_dim = word_embed_dim
-                self.word_embedding_placeholder = word_feat_layer.get_embedding_placeholder()
             else:
                 word_unit_dim = 0
-                self.word_embedding_placeholder = None
             
             if char_feat_enable == True:
                 self.logger.log_print("# build char-level representation layer")
@@ -444,12 +441,11 @@ class WordFeat(object):
                  embed_dim,
                  dropout,
                  pretrained,
-                 embedding=None,
+                 embed_data=None,
                  num_gpus=1,
                  default_gpu_id=0,
                  regularizer=None,
                  random_seed=0,
-                 feedable=True,
                  trainable=True,
                  scope="word_feat"):
         """initialize word-level featurization layer"""
@@ -457,18 +453,17 @@ class WordFeat(object):
         self.embed_dim = embed_dim
         self.dropout = dropout
         self.pretrained = pretrained
-        self.embedding = embedding
+        self.embed_data = embed_data
         self.num_gpus = num_gpus
         self.default_gpu_id = default_gpu_id
         self.regularizer = regularizer
         self.random_seed = random_seed
-        self.feedable = feedable
         self.trainable = trainable
         self.scope = scope
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
-            self.embedding_layer = create_embedding_layer(self.vocab_size, self.embed_dim, self.pretrained, self.embedding,
-                self.num_gpus, self.default_gpu_id, None, self.random_seed, self.feedable, self.trainable)
+            self.embedding_layer = create_embedding_layer(self.vocab_size, self.embed_dim, self.embed_data, self.pretrained,
+                self.num_gpus, self.default_gpu_id, None, self.random_seed, self.trainable)
             
             self.dropout_layer = create_dropout_layer(self.dropout, self.num_gpus, self.default_gpu_id, self.random_seed)
     
@@ -487,10 +482,6 @@ class WordFeat(object):
             input_word_feat_mask = input_word_dropout_mask
         
         return input_word_feat, input_word_feat_mask
-    
-    def get_embedding_placeholder(self):
-        """get word-level embedding placeholder"""
-        return self.embedding_layer.get_embedding_placeholder()
 
 class CharFeat(object):
     """char-level featurization layer"""
@@ -524,8 +515,8 @@ class CharFeat(object):
         self.scope = scope
         
         with tf.variable_scope(self.scope, reuse=tf.AUTO_REUSE):
-            self.embedding_layer = create_embedding_layer(self.vocab_size, self.embed_dim, False, None,
-                self.num_gpus, self.default_gpu_id, None, self.random_seed, False, self.trainable)
+            self.embedding_layer = create_embedding_layer(self.vocab_size, self.embed_dim, None, False,
+                self.num_gpus, self.default_gpu_id, None, self.random_seed, self.trainable)
             
             self.conv_layer = create_convolution_layer("stacked_multi_1d", 1, self.embed_dim,
                 self.unit_dim, self.window_size, 1, "SAME", self.activation, [0.0], None,
