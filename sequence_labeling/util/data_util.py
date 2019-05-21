@@ -47,6 +47,8 @@ def create_online_pipeline(external_index_enable,
     input_text_word_mask = None
     input_text_char = None
     input_text_char_mask = None
+    input_ext = None
+    input_ext_mask = None
     
     if external_index_enable == True:
         input_word_placeholder = tf.placeholder(shape=[None, None], dtype=tf.int32)

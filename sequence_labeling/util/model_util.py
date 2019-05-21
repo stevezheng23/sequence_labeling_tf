@@ -216,6 +216,10 @@ def create_online_model(logger,
     label_vocab_size, label_vocab_index, label_vocab_inverted_index = prepare_label_data(logger, None,
         hyperparams.data_label_vocab_file, hyperparams.data_label_vocab_size, hyperparams.data_label_unk, hyperparams.data_label_pad)
     
+    external_data={}
+    if word_embed_data is not None:
+        external_data["word_embedding"] = word_embed_data
+    
     logger.log_print("# create online data pipeline")
     data_pipeline = create_online_pipeline(hyperparams.data_external_index_enable,
         word_vocab_size, word_vocab_index, hyperparams.data_text_word_size, hyperparams.data_word_pad,
@@ -225,7 +229,7 @@ def create_online_model(logger,
 
     model_creator = get_model_creator(hyperparams.model_type)
     model = model_creator(logger=logger, hyperparams=hyperparams, data_pipeline=data_pipeline,
-        external_data={}, mode="online", scope=hyperparams.model_scope)
+        external_data=external_data, mode="online", scope=hyperparams.model_scope)
 
     return OnlineModel(model=model, data_pipeline=data_pipeline)
 
