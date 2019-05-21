@@ -130,12 +130,16 @@ class AttentionCRF(BaseModel):
             
             self.ckpt_debug_dir = os.path.join(self.hyperparams.train_ckpt_output_dir, "debug")
             self.ckpt_epoch_dir = os.path.join(self.hyperparams.train_ckpt_output_dir, "epoch")
+            self.ckpt_transfer_dir = os.path.join(self.hyperparams.train_ckpt_output_dir, "transfer")
             
             if not tf.gfile.Exists(self.ckpt_debug_dir):
                 tf.gfile.MakeDirs(self.ckpt_debug_dir)
             
             if not tf.gfile.Exists(self.ckpt_epoch_dir):
                 tf.gfile.MakeDirs(self.ckpt_epoch_dir)
+            
+            if not tf.gfile.Exists(self.ckpt_transfer_dir):
+                tf.gfile.MakeDirs(self.ckpt_transfer_dir)
             
             self.ckpt_debug_name = os.path.join(self.ckpt_debug_dir, "model_debug_ckpt")
             self.ckpt_epoch_name = os.path.join(self.ckpt_epoch_dir, "model_epoch_ckpt")
