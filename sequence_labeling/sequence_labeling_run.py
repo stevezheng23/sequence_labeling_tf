@@ -73,7 +73,7 @@ def extrinsic_eval(logger,
     label_output = []
     for i in range(data_size):
         predict = [pred.decode('utf-8') for pred in predict_data[i]]
-        label = input_data[i]["label"].split(' ')
+        label = input_data[i]["label"].split(' ')[:len(predict)]
         
         sample = {
             "id": input_data[i]["id"],
